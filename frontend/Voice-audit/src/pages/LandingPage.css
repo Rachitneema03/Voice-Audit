@@ -1,6 +1,11 @@
 .landing-page {
   min-height: 100vh;
   background-color: #0a0a0a;
+  background-image: url('/background.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: #ffffff;
   padding: 0;
   overflow-x: hidden;
@@ -43,7 +48,7 @@
   padding: 1rem 2.5rem;
   font-size: 1.1rem;
   font-weight: 600;
-  border-radius: 8px;
+  border-radius: 16px;
   opacity: 0;
   animation: fadeInUp 1s ease 0.7s forwards;
   transition: all 0.3s ease;
@@ -114,7 +119,14 @@
 .card-icon {
   font-size: 3rem;
   margin-bottom: 1rem;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.card-icon i {
+  font-size: 3rem;
 }
 
 .glass-card h2 {
@@ -131,16 +143,92 @@
 }
 
 .landing-footer {
-  text-align: center;
   padding: 4rem 2rem;
-  background-color: #0f0f0f;
+  background: rgba(15, 15, 15, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
 }
 
-.landing-footer p {
+.footer-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto 3rem;
+  text-align: left;
+}
+
+.footer-section h3 {
+  color: #ffffff;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.footer-section p {
+  color: #b0b0b0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.footer-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-section ul li {
+  color: #b0b0b0;
+  font-size: 0.95rem;
+  line-height: 1.8;
+  padding-left: 1.2rem;
+  position: relative;
+}
+
+.footer-section ul li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #ffffff;
+}
+
+.footer-cta {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.footer-cta p {
   font-size: 1.3rem;
   margin-bottom: 2rem;
   color: #b0b0b0;
+}
+
+.footer-bottom {
+  text-align: center;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-bottom p {
+  margin: 0.5rem 0;
+  color: #b0b0b0;
+  font-size: 0.9rem;
+}
+
+.copyright {
+  color: #666666;
+}
+
+.team {
+  color: #b0b0b0;
+}
+
+.team-name {
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .get-started-btn-footer {
@@ -188,6 +276,19 @@
 
   .glass-card {
     padding: 2rem;
+  }
+
+  .footer-content {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .footer-section {
+    text-align: center;
+  }
+
+  .footer-cta p {
+    font-size: 1.1rem;
   }
 }
 
