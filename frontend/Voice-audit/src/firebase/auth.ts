@@ -4,6 +4,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   signOut,
+  updateProfile,
 } from "firebase/auth";
 import type { User, UserCredential } from "firebase/auth";
 import { auth } from "./firebaseConfig";
@@ -34,5 +35,14 @@ export const logout = async (): Promise<void> => {
 
 export const getCurrentUser = (): User | null => {
   return auth.currentUser;
+};
+
+export const updateUserDisplayName = async (displayName: string): Promise<void> => {
+  const user = auth.currentUser;
+  if (user) {
+    await updateProfile(user, { displayName });
+  } else {
+    throw new Error("No user is currently signed in");
+  }
 };
 

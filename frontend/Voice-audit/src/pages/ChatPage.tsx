@@ -8,8 +8,13 @@ import {
   saveMessage, 
   loadUserChats, 
   loadChatMessages,
-  updateChatTitle
+  updateChatTitle,
+  loadUserProfile,
+  updateUserProfile,
+  uploadProfilePhoto,
+  deleteProfilePhoto
 } from '../services/firestore.service';
+import { updateUserDisplayName } from '../firebase/auth';
 import { initChromeExtension } from '../services/chromeExtension.service';
 import './ChatPage.css';
 
@@ -38,29 +43,27 @@ declare global {
 const ChatPage = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: 'Hello! I\'m your voice audit. Record a command to get started.',
-      sender: 'assistant',
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [transcribedText, setTranscribedText] = useState<string>('');
+  const [isEditingText, setIsEditingText] = useState(false);
+  const [editedText, setEditedText] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const recognitionRef = useRef<any>(null);
-  const [chatHistories, setChatHistories] = useState<ChatHistory[]>([
-    {
-      id: '1',
-      title: 'New Chat',
-      messages: [],
-      createdAt: new Date(),
-    },
-  ]);
-  const [currentChatId, setCurrentChatId] = useState('1');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [chatHistories, setChatHistories] = useState<ChatHistory[]>([]);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [isLoadingChats, setIsLoadingChats] = useState(true);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ displayName: string; email: string; profilePhotoURL?: string } | null>(null);
+  const [editDisplayName, setEditDisplayName] = useState('');
+  const [editProfilePhoto, setEditProfilePhoto] = useState<File | null>(null);
+  const [editProfilePhotoPreview, setEditProfilePhotoPreview] = useState<string | null>(null);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -83,7 +86,8 @@ const ChatPage = () => {
       return;
     }
 
-    // Load user data and chats on mount
+    // Load user data and chats on mount - always fetch from Firestore
+    setIsLoadingChats(true);
     loadUserChats(currentUser.uid)
       .then((chats) => {
         if (chats.length > 0) {
@@ -96,7 +100,7 @@ const ChatPage = () => {
           }));
           setChatHistories(formattedChats);
           
-          // Load messages for the first chat
+          // Load messages for the first chat (most recently updated)
           const firstChat = chats[0];
           if (firstChat.id) {
             setCurrentChatId(firstChat.id);
@@ -110,31 +114,39 @@ const ChatPage = () => {
                 }));
                 setMessages(formattedMessages);
               } else {
-                // Default welcome message
+                // Default welcome message if no messages exist
                 setMessages([{
-                  id: '1',
+                  id: Date.now().toString(),
                   text: 'Hello! I\'m your voice audit. Record a command to get started.',
                   sender: 'assistant',
                   timestamp: new Date(),
                 }]);
               }
+              setIsLoadingChats(false);
+            }).catch((error) => {
+              console.error('Error loading messages:', error);
+              setIsLoadingChats(false);
             });
+          } else {
+            setIsLoadingChats(false);
           }
         } else {
-          // Create first chat if none exists
-          createChat(currentUser.uid, 'New Chat').then((chatId) => {
-            setCurrentChatId(chatId);
-            setChatHistories([{
-              id: chatId,
-              title: 'New Chat',
-              messages: [],
-              createdAt: new Date(),
-            }]);
-          });
+          // No chats exist - show welcome message without creating a chat
+          // Chat will be created only when user sends their first message
+          setChatHistories([]);
+          setCurrentChatId(null);
+          setMessages([{
+            id: Date.now().toString(),
+            text: 'Hello! I\'m your voice audit. Record a command to get started.',
+            sender: 'assistant',
+            timestamp: new Date(),
+          }]);
+          setIsLoadingChats(false);
         }
       })
       .catch((error) => {
         console.error('Error loading chats:', error);
+        setIsLoadingChats(false);
       });
 
     // Check backend connection
@@ -161,6 +173,36 @@ const ChatPage = () => {
         .catch((error) => {
           console.error('Error checking Google connection:', error);
           setIsGoogleConnected(false);
+        });
+
+      // Load user profile
+      loadUserProfile(currentUser.uid)
+        .then((profile) => {
+          if (profile) {
+            // Use custom photo if exists, otherwise fall back to Google photo
+            const photoURL = profile.profilePhotoURL || currentUser.photoURL || '';
+            setUserProfile({
+              displayName: profile.displayName || currentUser.displayName || '',
+              email: profile.email || currentUser.email || '',
+              profilePhotoURL: photoURL,
+            });
+          } else {
+            // If no profile exists, use auth data (including Google photo)
+            setUserProfile({
+              displayName: currentUser.displayName || '',
+              email: currentUser.email || '',
+              profilePhotoURL: currentUser.photoURL || '',
+            });
+          }
+        })
+        .catch((error) => {
+          console.error('Error loading user profile:', error);
+          // Fallback to auth data (including Google photo)
+          setUserProfile({
+            displayName: currentUser.displayName || '',
+            email: currentUser.email || '',
+            profilePhotoURL: currentUser.photoURL || '',
+          });
         });
     }
 
@@ -248,9 +290,12 @@ const ChatPage = () => {
   };
 
   const handleSend = () => {
-    if (transcribedText.trim()) {
-      handleTextSubmit(transcribedText);
+    const textToSend = isEditingText ? editedText : transcribedText;
+    if (textToSend.trim()) {
+      handleTextSubmit(textToSend);
       setTranscribedText('');
+      setEditedText('');
+      setIsEditingText(false);
     }
   };
 
@@ -259,6 +304,31 @@ const ChatPage = () => {
       stopRecording();
     }
     setTranscribedText('');
+    setEditedText('');
+    setIsEditingText(false);
+  };
+
+  const handleEditClick = () => {
+    setIsEditingText(true);
+    setEditedText(transcribedText);
+    // Focus the textarea after a short delay to ensure it's rendered
+    setTimeout(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(
+        textareaRef.current.value.length,
+        textareaRef.current.value.length
+      );
+    }, 0);
+  };
+
+  const handleSaveEdit = () => {
+    setTranscribedText(editedText);
+    setIsEditingText(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditedText('');
+    setIsEditingText(false);
   };
 
   const handleRecordAgain = () => {
@@ -268,6 +338,24 @@ const ChatPage = () => {
 
   const handleTextSubmit = async (text: string) => {
     if (!text.trim() || isProcessing || !currentUser) return;
+
+    // Ensure we have a chat ID - create chat only when user actually sends a message
+    let chatId = currentChatId;
+    if (!chatId) {
+      // Create new chat only when user actually sends a message
+      const newTitle = text.substring(0, 30) || 'New Chat';
+      chatId = await createChat(currentUser.uid, newTitle);
+      setCurrentChatId(chatId);
+      
+      // Add new chat to chatHistories
+      const newChat: ChatHistory = {
+        id: chatId,
+        title: newTitle,
+        messages: [],
+        createdAt: new Date(),
+      };
+      setChatHistories((prev) => [newChat, ...prev]);
+    }
 
     // Check if command likely requires Google (quick check before sending)
     const lowerText = text.toLowerCase();
@@ -294,15 +382,21 @@ const ChatPage = () => {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
+      
+      // Save both messages to Firestore even though command failed
+      saveMessage(chatId, {
+        text: text.trim(),
+        sender: 'user',
+        chatId,
+      }).catch(console.error);
+      
+      saveMessage(chatId, {
+        text: errorMessage.text,
+        sender: 'assistant',
+        chatId,
+      }).catch(console.error);
+      
       return;
-    }
-
-    // Ensure we have a chat ID
-    let chatId = currentChatId;
-    if (chatId === '1' || !chatId) {
-      // Create new chat if needed
-      chatId = await createChat(currentUser.uid, text.substring(0, 30) || 'New Chat');
-      setCurrentChatId(chatId);
     }
 
     const userMessage: Message = {
@@ -367,6 +461,23 @@ const ChatPage = () => {
           c.id === chatId ? { ...c, title: newTitle } : c
         ));
       }
+      
+      // Refresh chat list to ensure proper ordering (chats ordered by updatedAt)
+      if (currentUser) {
+        loadUserChats(currentUser.uid)
+          .then((chats) => {
+            if (chats.length > 0) {
+              const formattedChats: ChatHistory[] = chats.map((chat) => ({
+                id: chat.id || Date.now().toString(),
+                title: chat.title,
+                messages: [],
+                createdAt: chat.createdAt instanceof Date ? chat.createdAt : new Date(),
+              }));
+              setChatHistories(formattedChats);
+            }
+          })
+          .catch(console.error);
+      }
     } catch (error: any) {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -382,6 +493,23 @@ const ChatPage = () => {
         sender: 'assistant',
         chatId,
       }).catch(console.error);
+      
+      // Refresh chat list to ensure proper ordering
+      if (currentUser) {
+        loadUserChats(currentUser.uid)
+          .then((chats) => {
+            if (chats.length > 0) {
+              const formattedChats: ChatHistory[] = chats.map((chat) => ({
+                id: chat.id || Date.now().toString(),
+                title: chat.title,
+                messages: [],
+                createdAt: chat.createdAt instanceof Date ? chat.createdAt : new Date(),
+              }));
+              setChatHistories(formattedChats);
+            }
+          })
+          .catch(console.error);
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -485,7 +613,7 @@ const ChatPage = () => {
       setCurrentChatId(chatId);
       setMessages([
         {
-          id: '1',
+          id: Date.now().toString(),
           text: 'Hello! I\'m your voice audit. Type a command to get started.',
           sender: 'assistant',
           timestamp: new Date(),
@@ -493,6 +621,119 @@ const ChatPage = () => {
       ]);
     } catch (error) {
       console.error('Error creating new chat:', error);
+    }
+  };
+
+  const handleEditProfile = () => {
+    setEditDisplayName(userProfile?.displayName || currentUser?.displayName || '');
+    setEditProfilePhoto(null);
+    // Show custom photo if exists, otherwise show Google photo as preview
+    const currentPhoto = userProfile?.profilePhotoURL || currentUser?.photoURL || null;
+    setEditProfilePhotoPreview(currentPhoto);
+    setShowEditProfile(true);
+    setShowAccountMenu(false);
+  };
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        showNotification('Please select an image file', 'error');
+        return;
+      }
+      
+      // Validate file size (max 10MB - will be compressed before upload)
+      if (file.size > 10 * 1024 * 1024) {
+        showNotification('Image size must be less than 10MB', 'error');
+        return;
+      }
+      
+      setEditProfilePhoto(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditProfilePhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setEditProfilePhoto(null);
+    // If removing custom photo, fall back to Google photo if available
+    const googlePhoto = currentUser?.photoURL || null;
+    setEditProfilePhotoPreview(googlePhoto);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!currentUser || !editDisplayName.trim()) return;
+
+    setIsUpdatingProfile(true);
+    try {
+      let photoURL: string | undefined = userProfile?.profilePhotoURL;
+      
+      // If user removes photo, set to empty string (will fall back to Google photo)
+      if (editProfilePhotoPreview === null && userProfile?.profilePhotoURL) {
+        // User removed custom photo - delete it and fall back to Google photo
+        try {
+          await deleteProfilePhoto(userProfile.profilePhotoURL);
+        } catch (error) {
+          console.error('Error deleting old photo:', error);
+          // Continue even if deletion fails
+        }
+        photoURL = currentUser.photoURL || '';
+      } else if (editProfilePhoto) {
+        // Upload new photo if selected
+        // Delete old custom photo if exists (but not Google photo)
+        if (userProfile?.profilePhotoURL && !userProfile.profilePhotoURL.includes('googleusercontent.com')) {
+          try {
+            await deleteProfilePhoto(userProfile.profilePhotoURL);
+          } catch (error) {
+            console.error('Error deleting old photo:', error);
+            // Continue even if deletion fails
+          }
+        }
+        
+        // Upload new photo with progress tracking
+        photoURL = await uploadProfilePhoto(
+          currentUser.uid, 
+          editProfilePhoto,
+          (progress) => setUploadProgress(progress)
+        );
+      } else if (!editProfilePhoto && !userProfile?.profilePhotoURL) {
+        // If no custom photo exists, use Google photo
+        photoURL = currentUser.photoURL || '';
+      }
+      
+      // Update Firebase Auth displayName
+      await updateUserDisplayName(editDisplayName.trim());
+      
+      // Update Firestore profile
+      await updateUserProfile(currentUser.uid, editDisplayName.trim(), photoURL);
+      
+      // Update local state - use Google photo as fallback
+      setUserProfile({
+        displayName: editDisplayName.trim(),
+        email: currentUser.email || '',
+        profilePhotoURL: photoURL || currentUser.photoURL || '',
+      });
+      
+      setShowEditProfile(false);
+      setEditProfilePhoto(null);
+      setEditProfilePhotoPreview(null);
+      setUploadProgress(0);
+      showNotification('Profile updated successfully!', 'success');
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      showNotification(`Failed to update profile: ${error.message}`, 'error');
+    } finally {
+      setIsUpdatingProfile(false);
+      setUploadProgress(0);
     }
   };
 
@@ -515,7 +756,7 @@ const ChatPage = () => {
         } else {
           setMessages([
             {
-              id: '1',
+              id: Date.now().toString(),
               text: 'Hello! I\'m your voice audit. Type a command to get started.',
               sender: 'assistant',
               timestamp: new Date(),
@@ -526,7 +767,7 @@ const ChatPage = () => {
         console.error('Error loading messages:', error);
         setMessages([
           {
-            id: '1',
+            id: Date.now().toString(),
             text: 'Hello! I\'m your voice audit. Type a command to get started.',
             sender: 'assistant',
             timestamp: new Date(),
@@ -546,7 +787,7 @@ const ChatPage = () => {
             onClick={() => setNotification(null)}
             aria-label="Close notification"
           >
-            ×
+            <i className="bi bi-x-lg"></i>
           </button>
         </div>
       )}
@@ -574,16 +815,28 @@ const ChatPage = () => {
 
         {!sidebarCollapsed && (
           <div className="chat-history">
-            {chatHistories.map((chat) => (
-              <div
-                key={chat.id}
-                className={`chat-history-item ${currentChatId === chat.id ? 'active' : ''}`}
-                onClick={() => handleChatSelect(chat.id)}
-              >
-                <span className="chat-icon">💬</span>
-                <span className="chat-title">{chat.title}</span>
+            {isLoadingChats ? (
+              <div className="chat-loading">
+                <i className="bi bi-arrow-repeat"></i>
+                <span>Loading chats...</span>
               </div>
-            ))}
+            ) : chatHistories.length === 0 ? (
+              <div className="chat-empty">
+                <i className="bi bi-chat-left-text"></i>
+                <span>No chats yet</span>
+              </div>
+            ) : (
+              chatHistories.map((chat) => (
+                <div
+                  key={chat.id}
+                  className={`chat-history-item ${currentChatId === chat.id ? 'active' : ''}`}
+                  onClick={() => handleChatSelect(chat.id)}
+                >
+                  <i className="bi bi-chat-left-text chat-icon"></i>
+                  <span className="chat-title">{chat.title}</span>
+                </div>
+              ))
+            )}
           </div>
         )}
 
@@ -593,26 +846,81 @@ const ChatPage = () => {
               className="account-btn"
               onClick={() => setShowAccountMenu(!showAccountMenu)}
             >
-              <span className="account-icon">👤</span>
-              <span>{currentUser?.displayName || currentUser?.email || 'Account'}</span>
+              <div className="account-avatar">
+                {(userProfile?.profilePhotoURL || currentUser?.photoURL) ? (
+                  <img 
+                    src={userProfile?.profilePhotoURL || currentUser?.photoURL || ''} 
+                    alt="Profile" 
+                    className="account-avatar-img"
+                  />
+                ) : userProfile?.displayName || currentUser?.displayName ? (
+                  <span className="account-avatar-text">
+                    {(userProfile?.displayName || currentUser?.displayName || '').charAt(0).toUpperCase()}
+                  </span>
+                ) : (
+                  <i className="bi bi-person-circle account-icon"></i>
+                )}
+              </div>
+              <div className="account-info">
+                <div className="account-name">
+                  {userProfile?.displayName || currentUser?.displayName || 'User'}
+                </div>
+                <div className="account-email">
+                  {userProfile?.email || currentUser?.email || ''}
+                </div>
+              </div>
+              <i className={`bi bi-chevron-${showAccountMenu ? 'up' : 'down'} account-chevron`}></i>
             </button>
           {showAccountMenu && (
             <div className="account-menu">
-              <div className="account-menu-user-info">
-                <div className="account-menu-email">{currentUser?.email}</div>
-                {currentUser?.displayName && (
-                  <div className="account-menu-name">{currentUser.displayName}</div>
-                )}
+              <div className="account-menu-header">
+                <div className="account-menu-avatar">
+                  {(userProfile?.profilePhotoURL || currentUser?.photoURL) ? (
+                    <img 
+                      src={userProfile?.profilePhotoURL || currentUser?.photoURL || ''} 
+                      alt="Profile" 
+                      className="account-menu-avatar-img"
+                    />
+                  ) : userProfile?.displayName || currentUser?.displayName ? (
+                    <span className="account-menu-avatar-text">
+                      {(userProfile?.displayName || currentUser?.displayName || '').charAt(0).toUpperCase()}
+                    </span>
+                  ) : (
+                    <i className="bi bi-person-circle"></i>
+                  )}
+                </div>
+                <div className="account-menu-user-info">
+                  <div className="account-menu-name">
+                    {userProfile?.displayName || currentUser?.displayName || 'User'}
+                  </div>
+                  <div className="account-menu-email">{userProfile?.email || currentUser?.email}</div>
+                </div>
               </div>
               <div className="account-menu-divider"></div>
-              <div className="account-menu-item">Profile</div>
-              <div className="account-menu-item">Settings</div>
+              <div 
+                className="account-menu-item"
+                onClick={handleEditProfile}
+              >
+                <i className="bi bi-pencil"></i> <span>Edit Profile</span>
+              </div>
+              <div className="account-menu-item">
+                <i className="bi bi-gear"></i> <span>Settings</span>
+              </div>
               <div 
                 className="account-menu-item"
                 onClick={handleConnectGoogle}
               >
-                {isGoogleConnected ? '✓ Google Connected' : 'Connect Google'}
+                {isGoogleConnected ? (
+                  <>
+                    <i className="bi bi-check-circle"></i> <span>Google Connected</span>
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-google"></i> <span>Connect Google</span>
+                  </>
+                )}
               </div>
+              <div className="account-menu-divider"></div>
               <div 
                 className="account-menu-item account-menu-item-danger"
                 onClick={async () => {
@@ -624,7 +932,7 @@ const ChatPage = () => {
                   }
                 }}
               >
-                Sign Out
+                <i className="bi bi-box-arrow-right"></i> <span>Sign Out</span>
               </div>
             </div>
           )}
@@ -649,10 +957,7 @@ const ChatPage = () => {
               {message.sender === 'assistant' && (
                 <div className="assistant-avatar">
                   <div className="avatar-glow"></div>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="avatar-icon">
-                    <circle cx="12" cy="8" r="4"></circle>
-                    <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"></path>
-                  </svg>
+                  <i className="bi bi-robot avatar-icon"></i>
                 </div>
               )}
               <div className="message-content">
@@ -667,10 +972,7 @@ const ChatPage = () => {
             <div className="message assistant-message message-slide-in">
               <div className="assistant-avatar">
                 <div className="avatar-glow"></div>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="avatar-icon">
-                  <circle cx="12" cy="8" r="4"></circle>
-                  <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"></path>
-                </svg>
+                <i className="bi bi-robot avatar-icon"></i>
               </div>
               <div className="message-content typing-indicator">
                 <span></span>
@@ -693,6 +995,15 @@ const ChatPage = () => {
                 >
                   <i className="bi bi-mic-fill"></i>
                 </button>
+                {!isEditingText && (
+                  <button
+                    className="control-btn edit-btn"
+                    onClick={handleEditClick}
+                    title="Edit Text"
+                  >
+                    <i className="bi bi-pencil-fill"></i>
+                  </button>
+                )}
                 <button
                   className="control-btn cancel-btn"
                   onClick={handleCancel}
@@ -702,20 +1013,64 @@ const ChatPage = () => {
                 </button>
               </div>
               <div className="voice-input-text">
-                <p className="voice-input-title">
-                  {transcribedText}
-                </p>
-                <p className="voice-input-subtitle">
-                  Review your transcription or send
-                </p>
+                {isEditingText ? (
+                  <div className="text-edit-container">
+                    <textarea
+                      ref={textareaRef}
+                      className="text-edit-textarea"
+                      value={editedText}
+                      onChange={(e) => setEditedText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSaveEdit();
+                        } else if (e.key === 'Escape') {
+                          handleCancelEdit();
+                        }
+                      }}
+                      placeholder="Edit your message..."
+                      rows={3}
+                      autoFocus
+                    />
+                    <div className="text-edit-actions">
+                      <button
+                        className="text-edit-btn save-btn"
+                        onClick={handleSaveEdit}
+                        title="Save (Enter)"
+                      >
+                        <i className="bi bi-check-lg"></i>
+                        <span>Save</span>
+                      </button>
+                      <button
+                        className="text-edit-btn cancel-edit-btn"
+                        onClick={handleCancelEdit}
+                        title="Cancel (Esc)"
+                      >
+                        <i className="bi bi-x-lg"></i>
+                        <span>Cancel</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="voice-input-title">
+                      {transcribedText}
+                    </p>
+                    <p className="voice-input-subtitle">
+                      Review your transcription, edit, or send
+                    </p>
+                  </>
+                )}
               </div>
-              <button
-                className="send-btn-circle"
-                onClick={handleSend}
-                title="Send"
-              >
-                <i className="bi bi-send-fill"></i>
-              </button>
+              {!isEditingText && (
+                <button
+                  className="send-btn-circle"
+                  onClick={handleSend}
+                  title="Send"
+                >
+                  <i className="bi bi-send-fill"></i>
+                </button>
+              )}
             </div>
           ) : (
             <div className="voice-input-wrapper">
@@ -762,6 +1117,136 @@ const ChatPage = () => {
           )}
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {showEditProfile && (
+        <div className="modal-overlay" onClick={() => setShowEditProfile(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Edit Profile</h2>
+              <button
+                className="modal-close-btn"
+                onClick={() => setShowEditProfile(false)}
+                title="Close"
+              >
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Profile Photo</label>
+                <div className="profile-photo-upload">
+                  <div className="profile-photo-preview">
+                    {editProfilePhotoPreview ? (
+                      <>
+                        <img 
+                          src={editProfilePhotoPreview} 
+                          alt="Profile preview" 
+                          className="profile-photo-img"
+                        />
+                        <button
+                          type="button"
+                          className="profile-photo-remove"
+                          onClick={handleRemovePhoto}
+                          title="Remove photo"
+                        >
+                          <i className="bi bi-x-lg"></i>
+                        </button>
+                      </>
+                    ) : (
+                      <div className="profile-photo-placeholder">
+                        <i className="bi bi-person-circle"></i>
+                      </div>
+                    )}
+                  </div>
+                  <div className="profile-photo-actions">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoSelect}
+                      className="profile-photo-input"
+                      id="profilePhoto"
+                    />
+                    <label htmlFor="profilePhoto" className="profile-photo-btn">
+                      <i className="bi bi-camera"></i>
+                      {editProfilePhotoPreview ? 'Change Photo' : 'Upload Photo'}
+                    </label>
+                    {editProfilePhotoPreview && (
+                      <button
+                        type="button"
+                        className="profile-photo-btn profile-photo-btn-secondary"
+                        onClick={handleRemovePhoto}
+                      >
+                        <i className="bi bi-trash"></i>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <small className="form-hint">Max size: 10MB (will be compressed automatically). Supported formats: JPG, PNG, GIF</small>
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="displayName">Display Name</label>
+                <input
+                  id="displayName"
+                  type="text"
+                  className="form-input"
+                  value={editDisplayName}
+                  onChange={(e) => setEditDisplayName(e.target.value)}
+                  placeholder="Enter your display name"
+                  maxLength={50}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  className="form-input form-input-disabled"
+                  value={userProfile?.email || currentUser?.email || ''}
+                  disabled
+                  title="Email cannot be changed"
+                />
+                <small className="form-hint">Email cannot be changed</small>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="modal-btn modal-btn-secondary"
+                onClick={() => setShowEditProfile(false)}
+                disabled={isUpdatingProfile}
+              >
+                Cancel
+              </button>
+              <button
+                className="modal-btn modal-btn-primary"
+                onClick={handleSaveProfile}
+                disabled={isUpdatingProfile || !editDisplayName.trim()}
+              >
+                {isUpdatingProfile ? (
+                  <>
+                    <i className="bi bi-arrow-repeat"></i> 
+                    {uploadProgress > 0 ? `Uploading... ${uploadProgress}%` : 'Saving...'}
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-check-lg"></i> Save Changes
+                  </>
+                )}
+              </button>
+              {isUpdatingProfile && uploadProgress > 0 && (
+                <div className="upload-progress-bar">
+                  <div 
+                    className="upload-progress-fill" 
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
