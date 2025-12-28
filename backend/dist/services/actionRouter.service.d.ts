@@ -4,6 +4,7 @@ export interface ActionResult {
     action: string;
     message: string;
     data?: any;
+    requiresAuth?: boolean;
 }
 /**
  * Route Gemini response to appropriate Google service

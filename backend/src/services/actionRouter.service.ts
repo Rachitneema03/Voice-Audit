@@ -8,6 +8,7 @@ export interface ActionResult {
   action: string;
   message: string;
   data?: any;
+  requiresAuth?: boolean;
 }
 
 /**

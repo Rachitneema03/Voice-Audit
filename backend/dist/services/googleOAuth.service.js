@@ -26,26 +26,74 @@ exports.SCOPES = [
  * @param userId - User ID to include in state parameter for callback
  */
 function getAuthUrl(userId) {
-    return oauth2Client.generateAuthUrl({
-        access_type: "offline",
+    // Validate OAuth2 client configuration
+    if (!process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID === "dummy-client-id") {
+        throw new Error("GOOGLE_CLIENT_ID is not configured. Please set it in .env file.");
+    }
+    if (!process.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET === "dummy-client-secret") {
+        throw new Error("GOOGLE_CLIENT_SECRET is not configured. Please set it in .env file.");
+    }
+    console.log("🔗 Generating OAuth authorization URL...");
+    console.log("   - Client ID:", process.env.GOOGLE_CLIENT_ID.substring(0, 20) + "...");
+    console.log("   - Redirect URI:", process.env.GOOGLE_REDIRECT_URI || "http://localhost:5000/api/auth/google/callback");
+    console.log("   - User ID in state:", userId || "default");
+    console.log("   - Scopes:", exports.SCOPES.length, "scopes");
+    const authUrl = oauth2Client.generateAuthUrl({
+        access_type: "offline", // Required to get refresh token
         scope: exports.SCOPES,
-        prompt: "consent", // Force consent to get refresh token
+        prompt: "consent", // Force consent screen to get refresh token
         state: userId || "default", // Pass userId in state for callback
     });
+    console.log("✅ Authorization URL generated successfully");
+    return authUrl;
 }
 /**
  * Exchange authorization code for tokens
  */
 async function getTokensFromCode(code) {
-    const { tokens } = await oauth2Client.getToken(code);
-    if (!tokens.refresh_token) {
-        throw new Error("No refresh token received. User may need to re-authorize.");
+    try {
+        console.log("🔄 Exchanging authorization code for tokens...");
+        // Validate OAuth2 client configuration
+        if (!process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID === "dummy-client-id") {
+            throw new Error("GOOGLE_CLIENT_ID is not set. Please configure it in .env file.");
+        }
+        if (!process.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET === "dummy-client-secret") {
+            throw new Error("GOOGLE_CLIENT_SECRET is not set. Please configure it in .env file.");
+        }
+        const { tokens } = await oauth2Client.getToken(code);
+        console.log("✅ Tokens received from Google");
+        console.log("   - Has access_token:", !!tokens.access_token);
+        console.log("   - Has refresh_token:", !!tokens.refresh_token);
+        console.log("   - Expiry date:", tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : "Not set");
+        if (!tokens.access_token) {
+            throw new Error("No access token received from Google. Please try again.");
+        }
+        if (!tokens.refresh_token) {
+            console.warn("⚠️  No refresh token received. This might happen if user already authorized before.");
+            console.warn("   User may need to revoke access and re-authorize to get refresh token.");
+            throw new Error("No refresh token received. Please revoke access in Google Account settings and try again, or ensure 'prompt=consent' is set.");
+        }
+        const expiryDate = tokens.expiry_date || (Date.now() + 3600 * 1000); // Default 1 hour if not provided
+        return {
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+            expiry_date: expiryDate,
+        };
     }
-    return {
-        access_token: tokens.access_token || "",
-        refresh_token: tokens.refresh_token,
-        expiry_date: tokens.expiry_date || Date.now(),
-    };
+    catch (error) {
+        console.error("❌ Error exchanging code for tokens:", error);
+        // Provide more helpful error messages
+        if (error.message?.includes("invalid_grant")) {
+            throw new Error("Authorization code expired or already used. Please try connecting Google again.");
+        }
+        if (error.message?.includes("redirect_uri_mismatch")) {
+            throw new Error("Redirect URI mismatch. Please check GOOGLE_REDIRECT_URI in .env matches Google Cloud Console settings.");
+        }
+        if (error.message?.includes("invalid_client")) {
+            throw new Error("Invalid OAuth client credentials. Please check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env file.");
+        }
+        throw error;
+    }
 }
 /**
  * Store tokens in Firestore for a user
@@ -81,6 +129,13 @@ async function getUserTokens(userId) {
 async function getValidAccessToken(userId) {
     const tokens = await getUserTokens(userId);
     if (!tokens) {
+        console.error("❌ No tokens found for user:", userId);
+        console.error("   User needs to complete OAuth flow");
+        throw new Error("User not authenticated with Google. Please complete OAuth flow.");
+    }
+    if (!tokens.refresh_token) {
+        console.error("❌ No refresh token found for user:", userId);
+        console.error("   User needs to re-authorize to get refresh token");
         throw new Error("User not authenticated with Google. Please complete OAuth flow.");
     }
     // Check if token is expired (with 5 minute buffer)

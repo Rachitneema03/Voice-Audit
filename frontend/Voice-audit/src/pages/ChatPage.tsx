@@ -8,8 +8,7 @@ import {
   saveMessage, 
   loadUserChats, 
   loadChatMessages,
-  updateChatTitle,
-  saveUserProfile 
+  updateChatTitle
 } from '../services/firestore.service';
 import { initChromeExtension } from '../services/chromeExtension.service';
 import './ChatPage.css';
@@ -49,6 +48,8 @@ const ChatPage = () => {
   ]);
   const [isRecording, setIsRecording] = useState(false);
   const [transcribedText, setTranscribedText] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const recognitionRef = useRef<any>(null);
   const [chatHistories, setChatHistories] = useState<ChatHistory[]>([
     {
@@ -60,23 +61,13 @@ const ChatPage = () => {
   ]);
   const [currentChatId, setCurrentChatId] = useState('1');
   const [showAccountMenu, setShowAccountMenu] = useState(false);
-<<<<<<< HEAD
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-=======
-  const [textInput, setTextInput] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
-  const [backendConnected, setBackendConnected] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
->>>>>>> 4b3f2fd1c26ad46d6d9e50917b75c034d1cc67db
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-<<<<<<< HEAD
   useEffect(() => {
     return () => {
       if (recognitionRef.current) {
@@ -84,18 +75,14 @@ const ChatPage = () => {
       }
     };
   }, []);
-=======
-  // Load user data and chats on mount
+
   useEffect(() => {
     if (!currentUser) {
       navigate('/auth');
       return;
     }
 
-    // Save user profile if not already saved
-    saveUserProfile(currentUser).catch(console.error);
-
-    // Load chat history from Firestore
+    // Load user data and chats on mount
     loadUserChats(currentUser.uid)
       .then((chats) => {
         if (chats.length > 0) {
@@ -103,7 +90,7 @@ const ChatPage = () => {
           const formattedChats: ChatHistory[] = chats.map((chat) => ({
             id: chat.id || Date.now().toString(),
             title: chat.title,
-            messages: [], // Messages will be loaded separately
+            messages: [],
             createdAt: chat.createdAt instanceof Date ? chat.createdAt : new Date(),
           }));
           setChatHistories(formattedChats);
@@ -125,7 +112,7 @@ const ChatPage = () => {
                 // Default welcome message
                 setMessages([{
                   id: '1',
-                  text: 'Hello! I\'m your voice audit. Type a command to get started.',
+                  text: 'Hello! I\'m your voice audit. Record a command to get started.',
                   sender: 'assistant',
                   timestamp: new Date(),
                 }]);
@@ -152,11 +139,9 @@ const ChatPage = () => {
     // Check backend connection
     checkBackendHealth()
       .then(() => {
-        setBackendConnected(true);
         addSystemMessage('Backend connected successfully!');
       })
       .catch((error) => {
-        setBackendConnected(false);
         addSystemMessage(`⚠️ ${error.message}`);
       });
 
@@ -164,7 +149,7 @@ const ChatPage = () => {
     if (currentUser) {
       checkGoogleConnection()
         .then((result) => {
-          const connected = result.connected || result.isConnected || false;
+          const connected = result.connected || false;
           setIsGoogleConnected(connected);
           if (connected) {
             console.log('✅ Google account is connected');
@@ -202,14 +187,6 @@ const ChatPage = () => {
     };
     setMessages((prev) => [...prev, systemMessage]);
   };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
->>>>>>> 4b3f2fd1c26ad46d6d9e50917b75c034d1cc67db
 
   const startListening = () => {
     if (isRecording) return;
@@ -262,7 +239,6 @@ const ChatPage = () => {
     }
   };
 
-<<<<<<< HEAD
   const handleSend = () => {
     if (transcribedText.trim()) {
       handleTextSubmit(transcribedText);
@@ -280,24 +256,6 @@ const ChatPage = () => {
   const handleRecordAgain = () => {
     handleCancel();
     startListening();
-  };
-
-  const handleTextSubmit = async (text: string) => {
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: text,
-=======
-  const handleAudioSubmit = async (_audioBlob: Blob) => {
-    // Note: Chrome extension converts audio to text, so we'll use text input instead
-    // This function is kept for compatibility but text input is the primary method
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: '[Voice Command Recorded - Please use text input]',
-      sender: 'user',
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, userMessage]);
-    addSystemMessage('Please type your command in the text input below, or use the Chrome extension to convert voice to text.');
   };
 
   const handleTextSubmit = async (text: string) => {
@@ -342,7 +300,6 @@ const ChatPage = () => {
     const userMessage: Message = {
       id: Date.now().toString(),
       text: text.trim(),
->>>>>>> 4b3f2fd1c26ad46d6d9e50917b75c034d1cc67db
       sender: 'user',
       timestamp: new Date(),
     };
@@ -356,7 +313,6 @@ const ChatPage = () => {
       chatId,
     }).catch(console.error);
 
-    setTextInput('');
     setIsProcessing(true);
 
     try {
@@ -576,7 +532,6 @@ const ChatPage = () => {
     <div className="chat-page">
       <div className={`chat-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
-<<<<<<< HEAD
           {!sidebarCollapsed && (
             <>
               <h2>Voice Audit</h2>
@@ -589,67 +544,6 @@ const ChatPage = () => {
             className="sidebar-toggle-btn"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-=======
-          <h2>Voice Audit</h2>
-          <button className="new-chat-btn" onClick={handleNewChat}>
-            + New Chat
-          </button>
-        </div>
-
-        <div className="chat-history">
-          {chatHistories.map((chat) => (
-            <div
-              key={chat.id}
-              className={`chat-history-item ${currentChatId === chat.id ? 'active' : ''}`}
-              onClick={() => handleChatSelect(chat.id)}
-            >
-              <span className="chat-icon">💬</span>
-              <span className="chat-title">{chat.title}</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="sidebar-footer">
-          {!isGoogleConnected && (
-            <button
-              className="connect-google-btn"
-              onClick={handleConnectGoogle}
-              disabled={isProcessing}
-              style={{
-                width: '100%',
-                padding: '10px',
-                marginBottom: '10px',
-                backgroundColor: '#4285f4',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500'
-              }}
-            >
-              🔗 Connect Google
-            </button>
-          )}
-          {isGoogleConnected && (
-            <div style={{
-              width: '100%',
-              padding: '10px',
-              marginBottom: '10px',
-              backgroundColor: '#34a853',
-              color: 'white',
-              borderRadius: '5px',
-              fontSize: '14px',
-              textAlign: 'center',
-              fontWeight: '500'
-            }}>
-              ✅ Google Connected
-            </div>
-          )}
-          <button
-            className="account-btn"
-            onClick={() => setShowAccountMenu(!showAccountMenu)}
->>>>>>> 4b3f2fd1c26ad46d6d9e50917b75c034d1cc67db
           >
             <i className={`bi bi-chevron-${sidebarCollapsed ? 'right' : 'left'}`}></i>
           </button>
@@ -737,7 +631,6 @@ const ChatPage = () => {
         </div>
 
         <div className="chat-input-container">
-<<<<<<< HEAD
           {transcribedText ? (
             <div className="voice-input-wrapper">
               <div className="recording-controls">
@@ -797,55 +690,6 @@ const ChatPage = () => {
               >
                 <i className="bi bi-send-fill"></i>
               </button>
-=======
-          <div className="input-wrapper">
-            <input
-              type="text"
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleTextSubmit(textInput);
-                }
-              }}
-              placeholder="Type your command here or use Chrome extension for voice..."
-              className="text-input"
-              disabled={isProcessing || !backendConnected}
-            />
-            <button
-              onClick={() => handleTextSubmit(textInput)}
-              disabled={!textInput.trim() || isProcessing || !backendConnected}
-              className="send-btn"
-            >
-              {isProcessing ? 'Processing...' : 'Send'}
-            </button>
-          </div>
-          <button
-            className={`record-btn ${isRecording ? 'recording' : ''}`}
-            onMouseDown={startRecording}
-            onMouseUp={stopRecording}
-            onTouchStart={startRecording}
-            onTouchEnd={stopRecording}
-            title="Hold to record (Chrome extension will convert to text)"
-            disabled={!backendConnected}
-          >
-            {isRecording ? (
-              <>
-                <span className="record-icon">⏹</span>
-                <span>Recording...</span>
-              </>
-            ) : (
-              <>
-                <span className="record-icon">🎤</span>
-                <span>Hold to Record</span>
-              </>
-            )}
-          </button>
-          {!backendConnected && (
-            <div className="backend-status">
-              ⚠️ Backend not connected. Please start the backend server.
->>>>>>> 4b3f2fd1c26ad46d6d9e50917b75c034d1cc67db
             </div>
           )}
         </div>

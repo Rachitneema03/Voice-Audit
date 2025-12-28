@@ -46,19 +46,71 @@ router.get("/google/callback", async (req, res) => {
             });
             return;
         }
-        // Exchange code for tokens
-        const tokens = await (0, googleOAuth_service_1.getTokensFromCode)(code);
+        console.log("📥 OAuth callback received");
+        console.log("   - Code:", code.substring(0, 20) + "...");
+        console.log("   - State:", state);
         // Extract userId from state parameter (passed from frontend in auth URL)
         const userId = state;
         if (!userId || userId === "default") {
-            res.status(400).json({
-                success: false,
-                message: "User ID is required. Please complete OAuth from the app.",
-            });
+            console.error("❌ Invalid state parameter:", state);
+            res.status(400).send(`
+          <!DOCTYPE html>
+          <html>
+          <head><title>Error</title></head>
+          <body style="font-family: Arial; padding: 2rem; text-align: center;">
+            <h1>❌ Error</h1>
+            <p>User ID is required. Please complete OAuth from the app.</p>
+            <p>State received: ${state || "none"}</p>
+            <script>setTimeout(() => window.close(), 3000);</script>
+          </body>
+          </html>
+        `);
+            return;
+        }
+        console.log("   - User ID:", userId);
+        // Exchange code for tokens
+        let tokens;
+        try {
+            tokens = await (0, googleOAuth_service_1.getTokensFromCode)(code);
+            console.log("✅ Tokens obtained successfully");
+        }
+        catch (tokenError) {
+            console.error("❌ Error getting tokens:", tokenError);
+            res.status(500).send(`
+          <!DOCTYPE html>
+          <html>
+          <head><title>Authorization Failed</title></head>
+          <body style="font-family: Arial; padding: 2rem; text-align: center; background: #fee; color: #c00;">
+            <h1>❌ Authorization Failed</h1>
+            <p><strong>Error:</strong> ${tokenError.message || "Failed to get tokens"}</p>
+            <p style="font-size: 0.9rem; margin-top: 1rem;">Please try again or contact support.</p>
+            <script>setTimeout(() => window.close(), 5000);</script>
+          </body>
+          </html>
+        `);
             return;
         }
         // Store tokens in Firestore
-        await (0, googleOAuth_service_1.storeUserTokens)(userId, tokens);
+        try {
+            await (0, googleOAuth_service_1.storeUserTokens)(userId, tokens);
+            console.log("✅ Tokens stored in Firestore for user:", userId);
+        }
+        catch (storeError) {
+            console.error("❌ Error storing tokens:", storeError);
+            res.status(500).send(`
+          <!DOCTYPE html>
+          <html>
+          <head><title>Storage Error</title></head>
+          <body style="font-family: Arial; padding: 2rem; text-align: center; background: #fee; color: #c00;">
+            <h1>❌ Storage Error</h1>
+            <p>Failed to store tokens: ${storeError.message}</p>
+            <p style="font-size: 0.9rem;">Please check Firebase configuration.</p>
+            <script>setTimeout(() => window.close(), 5000);</script>
+          </body>
+          </html>
+        `);
+            return;
+        }
         // Return HTML page that closes popup and notifies parent
         res.send(`
         <!DOCTYPE html>

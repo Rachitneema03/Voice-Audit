@@ -63,11 +63,15 @@ async function routeAction(userId, geminiResponse) {
     catch (error) {
         console.error("Error routing action:", error);
         // Check if it's an OAuth error
-        if (error.message?.includes("not authenticated") || error.message?.includes("OAuth")) {
+        if (error.message?.includes("not authenticated") || error.message?.includes("OAuth") || error.message?.includes("connect")) {
+            const actionType = geminiResponse.action === "calendar" ? "Calendar" :
+                geminiResponse.action === "task" ? "Tasks" :
+                    geminiResponse.action === "email" ? "Gmail" : "Google services";
             return {
                 success: false,
                 action: geminiResponse.action,
-                message: "Please authenticate with Google first. Complete the OAuth flow.",
+                message: `🔗 Google account not connected. To use ${actionType}, please click the "🔗 Connect Google" button in the sidebar (bottom left) and complete the authorization.`,
+                requiresAuth: true,
             };
         }
         return {
