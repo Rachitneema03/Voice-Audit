@@ -22,13 +22,32 @@
   position: relative;
 }
 
+.landing-logo-title-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.landing-logo {
+  width: 120px;
+  height: 120px;
+  margin-bottom: 1.5rem;
+  opacity: 0;
+  animation: fadeInUp 1s ease 0.1s forwards;
+  object-fit: contain;
+  display: block;
+}
+
 .landing-title {
   font-size: 4rem;
   font-weight: 700;
-  margin-bottom: 1.5rem;
+  margin: 0;
   opacity: 0;
   animation: fadeInUp 1s ease 0.3s forwards;
   letter-spacing: -0.02em;
+  text-align: center;
 }
 
 .landing-subtitle {
@@ -261,6 +280,12 @@
 }
 
 @media (max-width: 768px) {
+  .landing-logo {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 1rem;
+  }
+
   .landing-title {
     font-size: 2.5rem;
   }

@@ -63,6 +63,7 @@ const ChatPage = () => {
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -139,10 +140,10 @@ const ChatPage = () => {
     // Check backend connection
     checkBackendHealth()
       .then(() => {
-        addSystemMessage('Backend connected successfully!');
+        showNotification('Backend connected successfully!', 'success');
       })
       .catch((error) => {
-        addSystemMessage(`⚠️ ${error.message}`);
+        showNotification(`⚠️ ${error.message}`, 'error');
       });
 
     // Check Google connection status
@@ -186,6 +187,13 @@ const ChatPage = () => {
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, systemMessage]);
+  };
+
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => {
+      setNotification(null);
+    }, 4000);
   };
 
   const startListening = () => {
@@ -530,11 +538,26 @@ const ChatPage = () => {
 
   return (
     <div className="chat-page">
+      {notification && (
+        <div className={`notification notification-${notification.type}`}>
+          <span className="notification-message">{notification.message}</span>
+          <button 
+            className="notification-close" 
+            onClick={() => setNotification(null)}
+            aria-label="Close notification"
+          >
+            ×
+          </button>
+        </div>
+      )}
       <div className={`chat-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
           {!sidebarCollapsed && (
             <>
-              <h2>Voice Audit</h2>
+              <div className="sidebar-title-container">
+                <img src="/logo3.png" alt="Voice Audit Logo" className="sidebar-logo" />
+                <h2>Voice Audit</h2>
+              </div>
               <button className="new-chat-btn" onClick={handleNewChat}>
                 + New Chat
               </button>
@@ -611,14 +634,27 @@ const ChatPage = () => {
 
       <div className="chat-main">
         <div className="chat-header">
-          <h1>Voice Audit</h1>
+          <div className="chat-header-title-container">
+            <img src="/logo3.png" alt="Voice Audit Logo" className="chat-header-logo" />
+            <h1>Voice Audit</h1>
+          </div>
         </div>
         <div className="chat-messages">
-          {messages.map((message) => (
+          {messages.map((message, index) => (
             <div
               key={message.id}
-              className={`message ${message.sender === 'user' ? 'user-message' : 'assistant-message'}`}
+              className={`message ${message.sender === 'user' ? 'user-message' : 'assistant-message'} ${message.sender === 'assistant' ? 'message-slide-in' : ''}`}
+              style={{ animationDelay: `${index * 0.1}s` }}
             >
+              {message.sender === 'assistant' && (
+                <div className="assistant-avatar">
+                  <div className="avatar-glow"></div>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="avatar-icon">
+                    <circle cx="12" cy="8" r="4"></circle>
+                    <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"></path>
+                  </svg>
+                </div>
+              )}
               <div className="message-content">
                 {message.text}
               </div>
@@ -627,6 +663,22 @@ const ChatPage = () => {
               </div>
             </div>
           ))}
+          {isProcessing && (
+            <div className="message assistant-message message-slide-in">
+              <div className="assistant-avatar">
+                <div className="avatar-glow"></div>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="avatar-icon">
+                  <circle cx="12" cy="8" r="4"></circle>
+                  <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"></path>
+                </svg>
+              </div>
+              <div className="message-content typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
 
@@ -667,13 +719,29 @@ const ChatPage = () => {
             </div>
           ) : (
             <div className="voice-input-wrapper">
-              <button
-                className={`record-btn-circle ${isRecording ? 'recording' : ''}`}
-                onClick={isRecording ? stopRecording : startListening}
-                title={isRecording ? 'Stop Recording' : 'Click to Start Recording'}
-              >
-                <i className={`bi ${isRecording ? 'bi-stop-fill' : 'bi-mic-fill'}`}></i>
-              </button>
+              <div className="record-button-container">
+                <button
+                  className={`record-btn-circle ${isRecording ? 'recording' : ''}`}
+                  onClick={isRecording ? stopRecording : startListening}
+                  title={isRecording ? 'Stop Recording' : 'Click to Start Recording'}
+                >
+                  <i className={`bi ${isRecording ? 'bi-stop-fill' : 'bi-mic-fill'}`}></i>
+                  {isRecording && (
+                    <>
+                      <div className="recording-ring ring-1"></div>
+                      <div className="recording-ring ring-2"></div>
+                      <div className="recording-ring ring-3"></div>
+                      <div className="sound-waves">
+                        <div className="wave wave-1"></div>
+                        <div className="wave wave-2"></div>
+                        <div className="wave wave-3"></div>
+                        <div className="wave wave-4"></div>
+                        <div className="wave wave-5"></div>
+                      </div>
+                    </>
+                  )}
+                </button>
+              </div>
               <div className="voice-input-text">
                 <p className="voice-input-title">
                   {isRecording ? 'Listening...' : 'Click to Start Recording'}

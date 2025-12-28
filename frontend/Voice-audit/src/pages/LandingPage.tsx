@@ -11,7 +11,10 @@ const LandingPage = () => {
   return (
     <div className="landing-page">
       <div className="landing-hero">
-        <h1 className="landing-title">Voice Audit</h1>
+        <div className="landing-logo-title-container">
+          <img src="/logo3.png" alt="Voice Audit Logo" className="landing-logo" />
+          <h1 className="landing-title">Voice Audit</h1>
+        </div>
         <p className="landing-subtitle">Transform your commands into actions with AI-powered voice recognition</p>
         <button className="get-started-btn" onClick={handleGetStarted}>
           Get Started
