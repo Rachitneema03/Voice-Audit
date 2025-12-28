@@ -49,7 +49,7 @@ export async function sendEmail(
   }
 
   const auth = await getAuthenticatedClient(userId);
-  const gmail = google.gmail({ version: "v1", auth });
+  const gmail = google.gmail({ version: "v1", auth: auth as any });
 
   const rawMessage = createEmailMessage(
     data.recipient,

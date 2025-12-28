@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmail, signUpWithEmail, signInWithGoogle } from '../firebase/auth';
 import { useAuth } from '../contexts/AuthContext';
+import { saveUserProfile } from '../services/firestore.service';
 import './AuthPage.css';
 
 const AuthPage = () => {
@@ -26,11 +27,18 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
+      let userCredential;
       if (isSignIn) {
-        await signInWithEmail(email, password);
+        userCredential = await signInWithEmail(email, password);
       } else {
-        await signUpWithEmail(email, password);
+        userCredential = await signUpWithEmail(email, password);
       }
+      
+      // Save user profile to Firestore
+      if (userCredential?.user) {
+        await saveUserProfile(userCredential.user, isSignIn ? undefined : name);
+      }
+      
       // Redirect to chat after successful authentication
       navigate('/chat');
     } catch (err: any) {
@@ -64,7 +72,13 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
-      await signInWithGoogle();
+      const userCredential = await signInWithGoogle();
+      
+      // Save user profile to Firestore
+      if (userCredential?.user) {
+        await saveUserProfile(userCredential.user);
+      }
+      
       // Redirect to chat after successful authentication
       navigate('/chat');
     } catch (err: any) {

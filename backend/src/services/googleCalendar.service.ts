@@ -68,7 +68,7 @@ export async function createCalendarEvent(
   }
 
   const auth = await getAuthenticatedClient(userId);
-  const calendar = google.calendar({ version: "v3", auth });
+  const calendar = google.calendar({ version: "v3", auth: auth as any });
 
   // Parse date and time
   const eventDate = data.date ? parseDate(data.date) : new Date();

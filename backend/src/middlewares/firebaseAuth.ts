@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import admin from "../firebaseAdmin";
+import admin, { adminInitialized } from "../firebaseAdmin";
 
 export interface AuthenticatedRequest extends Request {
   user?: admin.auth.DecodedIdToken;
@@ -10,6 +10,13 @@ export async function verifyFirebaseToken(
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  if (!adminInitialized) {
+    res.status(503).json({ 
+      message: "Firebase Admin not initialized. Please check serviceAccount.json configuration." 
+    });
+    return;
+  }
+
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {

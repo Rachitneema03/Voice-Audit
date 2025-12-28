@@ -60,7 +60,7 @@ export async function createTask(
   }
 
   const auth = await getAuthenticatedClient(userId);
-  const tasks = google.tasks({ version: "v1", auth });
+  const tasks = google.tasks({ version: "v1", auth: auth as any });
 
   const taskListId = await getTaskListId(auth);
 
