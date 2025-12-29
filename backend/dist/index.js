@@ -23,7 +23,14 @@ const auth_route_1 = __importDefault(require("./routes/auth.route"));
 const user_route_1 = __importDefault(require("./routes/user.route"));
 const gemini_route_1 = __importDefault(require("./routes/gemini.route"));
 const app = (0, express_1.default)();
-const PORT = Number(process.env.PORT) || 5000;
+// Get PORT from environment (Railway sets this automatically)
+// Railway will inject PORT environment variable, so we must use it
+const PORT = process.env.PORT ? Number(process.env.PORT) : 5000;
+// Validate PORT is a valid number
+if (isNaN(PORT) || PORT <= 0) {
+    console.error("❌ Invalid PORT value:", process.env.PORT);
+    process.exit(1);
+}
 // CORS configuration
 const corsOptions = {
     origin: function (_origin, callback) {
@@ -95,8 +102,14 @@ app.use((_req, res) => {
     });
 });
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Backend running on 0.0.0.0:${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
+    console.log("=".repeat(50));
+    console.log("✅ Backend server started successfully!");
+    console.log("=".repeat(50));
+    console.log(`🌐 Server running on: 0.0.0.0:${PORT}`);
+    console.log(`📡 PORT from environment: ${process.env.PORT || "not set (using default 5000)"}`);
+    console.log(`🔧 Environment: ${process.env.NODE_ENV || "development"}`);
+    console.log(`📦 Node version: ${process.version}`);
+    console.log("=".repeat(50));
     // Validate required environment variables
     const requiredEnvVars = [
         "GEMINI_API_KEY",
@@ -106,7 +119,13 @@ app.listen(PORT, '0.0.0.0', () => {
     const missingVars = requiredEnvVars.filter((varName) => !process.env[varName]);
     if (missingVars.length > 0) {
         console.warn("⚠️  Missing environment variables:", missingVars.join(", "));
-        console.warn("Please check your .env file");
+        console.warn("Please check your environment variables in Railway dashboard");
     }
+    else {
+        console.log("✅ All required environment variables are set");
+    }
+    console.log("=".repeat(50));
+    console.log(`🚀 Server is ready to accept connections on port ${PORT}`);
+    console.log("=".repeat(50));
 });
 //# sourceMappingURL=index.js.map
