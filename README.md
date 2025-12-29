@@ -584,7 +584,7 @@ Include: description, steps to reproduce, expected vs actual behavior, screensho
 <a href="https://github.com/Rachitneema03">
 <img src="https://github.com/Rachitneema03.png" width="100px;" alt="Rachit Nima"/>
 <br />
-<sub><b>Rachit Nima</b></sub>
+<sub><b>Rachit Neema</b></sub>
 </a>
 <br />
 Frontend + UI
