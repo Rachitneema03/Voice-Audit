@@ -46,6 +46,7 @@ async function parseJsonResponse(response: Response): Promise<any> {
       
       throw new Error(
         `Backend returned HTML instead of JSON (${response.status} ${response.statusText}). ` +
+        `Error: ${errorTitle}\n\n` +
         `This usually means:\n` +
         `1. The API endpoint doesn't exist (404)\n` +
         `2. The backend URL is incorrect\n` +
