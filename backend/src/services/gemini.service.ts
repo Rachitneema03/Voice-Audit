@@ -3,7 +3,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export interface GeminiResponse {
-  action: "calendar" | "task" | "email" | "unknown";
+  action?: "calendar" | "task" | "email" | "unknown"; // Single action
+  actions?: GeminiResponse[]; // Multiple actions
   title?: string;
   description?: string;
   date?: string; // ISO date string or relative date
@@ -60,6 +61,8 @@ User input: "${text}"
 
 CRITICAL: You MUST return ONLY a valid JSON object. No markdown, no code blocks, no explanations, no extra text. Just the JSON.
 
+IMPORTANT: If the user asks for MULTIPLE actions in one command (e.g., "schedule a meeting and send an email"), return an array of actions in the "actions" field. Otherwise, return a single action in the "action" field.
+
 Rules:
 1. If it's about scheduling a meeting/event/appointment → action: "calendar"
 2. If it's about creating a task/todo/reminder → action: "task"  
@@ -72,6 +75,7 @@ For CALENDAR events, extract:
 - time: Convert to 24-hour format like "17:00" (5pm = 17:00, 2pm = 14:00)
 - duration: Default 60 minutes if not specified
 - description: Any additional details
+- location: Event location if mentioned
 
 For TASKS, extract:
 - title: Task name
@@ -84,8 +88,12 @@ For EMAIL, extract:
 - subject: Email subject
 - body: Email content
 
-Example input: "the meet will be on 31 dec 5 pm"
-Example output: {"action":"calendar","title":"Meet","date":"2024-12-31","time":"17:00","duration":60}
+Examples:
+Single action: "the meet will be on 31 dec 5 pm"
+Output: {"action":"calendar","title":"Meet","date":"2024-12-31","time":"17:00","duration":60}
+
+Multiple actions: "schedule a meeting tomorrow at 3pm and send an email to john@example.com about the project"
+Output: {"actions":[{"action":"calendar","title":"Meeting","date":"tomorrow","time":"15:00","duration":60},{"action":"email","recipient":"john@example.com","subject":"Project Update","body":"Regarding the project"}]}
 
 Now process this input: "${text}"
 
@@ -133,13 +141,24 @@ Return ONLY the JSON object, nothing else.`;
       throw new Error(`Failed to parse JSON: ${parseError.message}`);
     }
     
-    // Validate the response has at least an action
-    if (!parsed.action) {
-      console.error("❌ Parsed response missing 'action' field:", parsed);
-      throw new Error("Gemini response missing 'action' field");
+    // Validate the response has at least an action or actions array
+    if (!parsed.action && !parsed.actions) {
+      console.error("❌ Parsed response missing 'action' or 'actions' field:", parsed);
+      throw new Error("Gemini response missing 'action' or 'actions' field");
     }
     
-    console.log("✅ Gemini analysis complete. Action:", parsed.action);
+    // If actions array exists, validate it
+    if (parsed.actions && Array.isArray(parsed.actions)) {
+      console.log(`✅ Gemini analysis complete. Found ${parsed.actions.length} action(s)`);
+      for (const action of parsed.actions) {
+        if (!action.action) {
+          throw new Error("One or more actions in the array is missing the 'action' field");
+        }
+      }
+    } else {
+      console.log("✅ Gemini analysis complete. Action:", parsed.action);
+    }
+    
     return parsed;
   } catch (error: any) {
     console.error("❌ Gemini API Error:", error);

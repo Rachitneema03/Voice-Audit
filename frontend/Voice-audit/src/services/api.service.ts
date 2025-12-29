@@ -3,9 +3,13 @@ import { auth } from '../firebase/firebaseConfig';
 
 export interface ProcessTextResponse {
   success: boolean;
-  action: string;
+  action?: string;
   message: string;
   data?: any;
+  results?: ProcessTextResponse[]; // For multiple actions
+  totalActions?: number;
+  successfulActions?: number;
+  failedActions?: number;
 }
 
 /**

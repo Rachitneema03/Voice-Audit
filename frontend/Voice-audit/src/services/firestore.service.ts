@@ -267,35 +267,76 @@ export async function saveMessage(
 
 /**
  * Load all chats for a user
+ * Filters chats by userId and orders by updatedAt (most recent first)
+ * Falls back to in-memory sorting if Firestore index is not available
  */
 export async function loadUserChats(userId: string): Promise<FirestoreChatHistory[]> {
   try {
     const chatsRef = collection(db, "chats");
-    const q = query(
-      chatsRef,
-      where("userId", "==", userId),
-      orderBy("updatedAt", "desc")
-    );
+    
+    // Try query with orderBy first (requires Firestore composite index)
+    try {
+      const q = query(
+        chatsRef,
+        where("userId", "==", userId),
+        orderBy("updatedAt", "desc")
+      );
 
-    const querySnapshot = await getDocs(q);
-    const chats: FirestoreChatHistory[] = [];
+      const querySnapshot = await getDocs(q);
+      const chats: FirestoreChatHistory[] = [];
 
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      chats.push({
-        id: doc.id,
-        userId: data.userId,
-        title: data.title,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-        messageCount: data.messageCount || 0,
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        chats.push({
+          id: doc.id,
+          userId: data.userId,
+          title: data.title,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          messageCount: data.messageCount || 0,
+        });
       });
-    });
 
-    console.log("✅ Loaded chats:", chats.length);
-    return chats;
-  } catch (error) {
-    console.error("❌ Error loading chats:", error);
+      console.log(`✅ Loaded ${chats.length} chats for user ${userId}`);
+      return chats;
+    } catch (orderByError: any) {
+      // If orderBy fails (likely missing composite index), fall back to query without orderBy
+      // and sort in memory
+      console.warn("⚠️ OrderBy query failed, falling back to in-memory sort:", orderByError.message);
+      
+      const q = query(
+        chatsRef,
+        where("userId", "==", userId)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const chats: FirestoreChatHistory[] = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        chats.push({
+          id: doc.id,
+          userId: data.userId,
+          title: data.title,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          messageCount: data.messageCount || 0,
+        });
+      });
+
+      // Sort by updatedAt in descending order (most recent first)
+      chats.sort((a, b) => {
+        const aTime = a.updatedAt instanceof Date ? a.updatedAt.getTime() : 0;
+        const bTime = b.updatedAt instanceof Date ? b.updatedAt.getTime() : 0;
+        return bTime - aTime;
+      });
+
+      console.log(`✅ Loaded ${chats.length} chats for user ${userId} (sorted in memory)`);
+      return chats;
+    }
+  } catch (error: any) {
+    console.error(`❌ Error loading chats for user ${userId}:`, error);
+    // Return empty array on error to prevent UI crashes
     return [];
   }
 }

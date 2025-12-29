@@ -348,6 +348,46 @@ const ChatPage = () => {
     setEditedText('');
   };
 
+  /**
+   * Format action result for display
+   */
+  const formatActionResult = (result: any): string => {
+    if (!result.success) {
+      return `❌ ${result.message}`;
+    }
+
+    const { action, message, data } = result;
+    
+    switch (action) {
+      case "calendar":
+        return `📅 ${message}\n\n` +
+               `Event: ${data?.title || 'N/A'}\n` +
+               `Start: ${data?.start || 'N/A'}\n` +
+               `End: ${data?.end || 'N/A'}\n` +
+               (data?.location ? `Location: ${data.location}\n` : '') +
+               (data?.description ? `Description: ${data.description}\n` : '');
+      
+      case "task":
+        return `✅ ${message}\n\n` +
+               `Task: ${data?.title || 'N/A'}\n` +
+               `Due: ${data?.due || 'N/A'}\n` +
+               (data?.notes ? `Notes: ${data.notes}\n` : '') +
+               (data?.status ? `Status: ${data.status}\n` : '');
+      
+      case "email":
+        return `📧 ${message}\n\n` +
+               `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+               `📮 Recipient: ${data?.recipient || 'N/A'}\n` +
+               `📋 Subject: ${data?.subject || 'N/A'}\n` +
+               `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+               `💬 Email Content:\n${data?.body || 'N/A'}\n` +
+               `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+      
+      default:
+        return `${message}\n${data ? JSON.stringify(data, null, 2) : ''}`;
+    }
+  };
+
   const handleRecordAgain = () => {
     handleCancel();
     startListening();
@@ -356,23 +396,9 @@ const ChatPage = () => {
   const handleTextSubmit = async (text: string) => {
     if (!text.trim() || isProcessing || !currentUser) return;
 
-    // Ensure we have a chat ID - create chat only when user actually sends a message
+    // Don't create chat yet - wait for valid response
     let chatId = currentChatId;
-    if (!chatId) {
-      // Create new chat only when user actually sends a message
-      const newTitle = text.substring(0, 30) || 'New Chat';
-      chatId = await createChat(currentUser.uid, newTitle);
-      setCurrentChatId(chatId);
-      
-      // Add new chat to chatHistories
-      const newChat: ChatHistory = {
-        id: chatId,
-        title: newTitle,
-        messages: [],
-        createdAt: new Date(),
-      };
-      setChatHistories((prev) => [newChat, ...prev]);
-    }
+    let chatJustCreated = false;
 
     // Check if command likely requires Google (quick check before sending)
     const lowerText = text.toLowerCase();
@@ -425,17 +451,32 @@ const ChatPage = () => {
 
     setMessages((prev) => [...prev, userMessage]);
     
-    // Save user message to Firestore
-    saveMessage(chatId, {
-      text: text.trim(),
-      sender: 'user',
-      chatId,
-    }).catch(console.error);
+    // Don't save user message yet - wait for valid response
+    let shouldSaveMessages = false;
 
     setIsProcessing(true);
 
     try {
       const response = await processText(text.trim());
+      
+      // Check if this is a valid response (not an error or Gemini failure)
+      // Valid if: success is true, OR has results array with items, OR action is not "unknown"
+      const hasValidAction = response.action && 
+        response.action !== "unknown" && 
+        !response.message?.includes("Could not determine");
+      
+      const hasValidResults = response.results && 
+        Array.isArray(response.results) && 
+        response.results.length > 0 &&
+        response.results.some((r: any) => r.success && r.action !== "unknown");
+      
+      const isNotError = !response.message?.includes("Gemini API Error") && 
+        !response.message?.includes("Failed to process") &&
+        !response.message?.includes("GEMINI_ERROR") &&
+        !response.message?.includes("Could not determine");
+      
+      // Only save if we got a valid response with actual action
+      shouldSaveMessages = (response.success && hasValidAction) || hasValidResults || isNotError;
       
       // Check if response indicates Google auth is needed
       const needsAuth = !response.success && (
@@ -444,9 +485,22 @@ const ChatPage = () => {
         response.message?.includes("Connect Google")
       );
       
-      let messageText = response.success 
-        ? `✅ ${response.message}\n${response.data ? JSON.stringify(response.data, null, 2) : ''}`
-        : `❌ ${response.message}`;
+      let messageText = "";
+      
+      // Handle multiple actions response
+      if (response.results && Array.isArray(response.results)) {
+        messageText = `${response.message}\n\n`;
+        response.results.forEach((result: any, index: number) => {
+          messageText += `\n${index + 1}. ${formatActionResult(result)}\n`;
+        });
+      } else {
+        // Single action response
+        if (response.success) {
+          messageText = formatActionResult(response);
+        } else {
+          messageText = `❌ ${response.message}`;
+        }
+      }
       
       // Add helpful message if Google auth is needed
       if (needsAuth && !isGoogleConnected) {
@@ -462,25 +516,57 @@ const ChatPage = () => {
       
       setMessages((prev) => [...prev, assistantMessage]);
       
-      // Save assistant message to Firestore
-      saveMessage(chatId, {
-        text: assistantMessage.text,
-        sender: 'assistant',
-        chatId,
-      }).catch(console.error);
-
-      // Update chat title if it's still "New Chat"
-      const currentChat = chatHistories.find(c => c.id === chatId);
-      if (currentChat && currentChat.title === 'New Chat') {
-        const newTitle = text.substring(0, 30) || 'Chat';
-        updateChatTitle(chatId, newTitle).catch(console.error);
-        setChatHistories(prev => prev.map(c => 
-          c.id === chatId ? { ...c, title: newTitle } : c
-        ));
+      // Only save messages to Firestore if we got a valid response
+      if (shouldSaveMessages) {
+        // Create chat if it doesn't exist yet (only when we have valid response)
+        if (!chatId) {
+          const newTitle = text.substring(0, 30) || 'New Chat';
+          chatId = await createChat(currentUser.uid, newTitle);
+          setCurrentChatId(chatId);
+          chatJustCreated = true;
+          
+          // Add new chat to chatHistories
+          const newChat: ChatHistory = {
+            id: chatId,
+            title: newTitle,
+            messages: [],
+            createdAt: new Date(),
+          };
+          setChatHistories((prev) => [newChat, ...prev]);
+        }
+        
+        // Save user message
+        saveMessage(chatId, {
+          text: text.trim(),
+          sender: 'user',
+          chatId,
+        }).catch(console.error);
+        
+        // Save assistant message
+        saveMessage(chatId, {
+          text: assistantMessage.text,
+          sender: 'assistant',
+          chatId,
+        }).catch(console.error);
+      } else {
+        // If no valid response, don't save anything to database
+        console.log("⚠️ No valid response from Gemini - not saving to database");
       }
-      
-      // Refresh chat list from Firestore to ensure proper ordering (chats ordered by updatedAt)
-      await refreshChatsFromFirestore(false);
+
+      // Update chat title if it's still "New Chat" (only if chat was created)
+      if (chatId) {
+        const currentChat = chatHistories.find(c => c.id === chatId);
+        if (currentChat && currentChat.title === 'New Chat') {
+          const newTitle = text.substring(0, 30) || 'Chat';
+          updateChatTitle(chatId, newTitle).catch(console.error);
+          setChatHistories(prev => prev.map(c => 
+            c.id === chatId ? { ...c, title: newTitle } : c
+          ));
+        }
+        
+        // Refresh chat list from Firestore to ensure proper ordering (chats ordered by updatedAt)
+        await refreshChatsFromFirestore(false);
+      }
     } catch (error: any) {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -490,12 +576,11 @@ const ChatPage = () => {
       };
       setMessages((prev) => [...prev, errorMessage]);
       
-      // Save error message to Firestore
-      saveMessage(chatId, {
-        text: errorMessage.text,
-        sender: 'assistant',
-        chatId,
-      }).catch(console.error);
+      // Don't save error messages to Firestore - no valid conversation happened
+      console.log("⚠️ Error occurred - not saving to database");
+      
+      // If chat was just created and has no saved messages, we could optionally delete it
+      // But for now, just don't save the messages
       
       // Refresh chat list from Firestore to ensure proper ordering
       await refreshChatsFromFirestore(false);
