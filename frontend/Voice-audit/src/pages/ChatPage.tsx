@@ -46,7 +46,6 @@ const ChatPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [transcribedText, setTranscribedText] = useState<string>('');
-  const [isEditingText, setIsEditingText] = useState(false);
   const [editedText, setEditedText] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
@@ -294,7 +293,16 @@ const ChatPage = () => {
     recognition.onresult = (event: any) => {
       const text = event.results[0][0].transcript;
       setTranscribedText(text);
+      setEditedText(text); // Set editedText immediately so text is directly editable
       setIsRecording(false);
+      // Focus the textarea after a short delay to ensure it's rendered
+      setTimeout(() => {
+        textareaRef.current?.focus();
+        textareaRef.current?.setSelectionRange(
+          textareaRef.current.value.length,
+          textareaRef.current.value.length
+        );
+      }, 100);
     };
 
     recognition.onerror = (event: any) => {
@@ -323,12 +331,12 @@ const ChatPage = () => {
   };
 
   const handleSend = () => {
-    const textToSend = isEditingText ? editedText : transcribedText;
+    // Always use editedText when transcribedText exists (text is always editable)
+    const textToSend = transcribedText ? editedText : transcribedText;
     if (textToSend.trim()) {
       handleTextSubmit(textToSend);
       setTranscribedText('');
       setEditedText('');
-      setIsEditingText(false);
     }
   };
 
@@ -338,30 +346,6 @@ const ChatPage = () => {
     }
     setTranscribedText('');
     setEditedText('');
-    setIsEditingText(false);
-  };
-
-  const handleEditClick = () => {
-    setIsEditingText(true);
-    setEditedText(transcribedText);
-    // Focus the textarea after a short delay to ensure it's rendered
-    setTimeout(() => {
-      textareaRef.current?.focus();
-      textareaRef.current?.setSelectionRange(
-        textareaRef.current.value.length,
-        textareaRef.current.value.length
-      );
-    }, 0);
-  };
-
-  const handleSaveEdit = () => {
-    setTranscribedText(editedText);
-    setIsEditingText(false);
-  };
-
-  const handleCancelEdit = () => {
-    setEditedText('');
-    setIsEditingText(false);
   };
 
   const handleRecordAgain = () => {
@@ -1000,15 +984,6 @@ const ChatPage = () => {
                 >
                   <i className="bi bi-mic-fill"></i>
                 </button>
-                {!isEditingText && (
-                  <button
-                    className="control-btn edit-btn"
-                    onClick={handleEditClick}
-                    title="Edit Text"
-                  >
-                    <i className="bi bi-pencil-fill"></i>
-                  </button>
-                )}
                 <button
                   className="control-btn cancel-btn"
                   onClick={handleCancel}
@@ -1018,64 +993,36 @@ const ChatPage = () => {
                 </button>
               </div>
               <div className="voice-input-text">
-                {isEditingText ? (
-                  <div className="text-edit-container">
-                    <textarea
-                      ref={textareaRef}
-                      className="text-edit-textarea"
-                      value={editedText}
-                      onChange={(e) => setEditedText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSaveEdit();
-                        } else if (e.key === 'Escape') {
-                          handleCancelEdit();
-                        }
-                      }}
-                      placeholder="Edit your message..."
-                      rows={3}
-                      autoFocus
-                    />
-                    <div className="text-edit-actions">
-                      <button
-                        className="text-edit-btn save-btn"
-                        onClick={handleSaveEdit}
-                        title="Save (Enter)"
-                      >
-                        <i className="bi bi-check-lg"></i>
-                        <span>Save</span>
-                      </button>
-                      <button
-                        className="text-edit-btn cancel-edit-btn"
-                        onClick={handleCancelEdit}
-                        title="Cancel (Esc)"
-                      >
-                        <i className="bi bi-x-lg"></i>
-                        <span>Cancel</span>
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <p className="voice-input-title">
-                      {transcribedText}
-                    </p>
-                    <p className="voice-input-subtitle">
-                      Review your transcription, edit, or send
-                    </p>
-                  </>
-                )}
+                <div className="text-edit-container">
+                  <textarea
+                    ref={textareaRef}
+                    className="text-edit-textarea"
+                    value={editedText}
+                    onChange={(e) => setEditedText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      } else if (e.key === 'Escape') {
+                        handleCancel();
+                      }
+                    }}
+                    placeholder="Edit your transcribed message..."
+                    rows={3}
+                    autoFocus
+                  />
+                </div>
+                <p className="voice-input-subtitle">
+                  Review and edit your transcription, then send
+                </p>
               </div>
-              {!isEditingText && (
-                <button
-                  className="send-btn-circle"
-                  onClick={handleSend}
-                  title="Send"
-                >
-                  <i className="bi bi-send-fill"></i>
-                </button>
-              )}
+              <button
+                className="send-btn-circle"
+                onClick={handleSend}
+                title="Send (Enter)"
+              >
+                <i className="bi bi-send-fill"></i>
+              </button>
             </div>
           ) : (
             <div className="voice-input-wrapper">
