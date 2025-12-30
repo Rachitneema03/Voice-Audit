@@ -40,9 +40,8 @@ if (process.env.NODE_ENV === "production" && PORT === 5000 && !process.env.PORT)
 }
 // CORS configuration - using the centralized corsOptions from cors.ts
 // This handles multiple origins, Vercel preview deployments, and local development
+// The cors() middleware automatically handles OPTIONS preflight requests
 app.use((0, cors_1.default)(cors_2.corsOptions));
-// Explicit OPTIONS handler for preflight requests (additional safety)
-app.options("*", (0, cors_1.default)(cors_2.corsOptions));
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 // Log all requests in development

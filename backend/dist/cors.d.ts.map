@@ -1,1 +1,1 @@
-{"version":3,"file":"cors.d.ts","sourceRoot":"","sources":["../src/cors.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,SAAS,CAAC;AAClC,OAAO,EAAE,mBAAmB,EAAE,MAAM,MAAM,CAAC;AAkD3C,eAAO,MAAM,WAAW,EAAE,mBAAmB,CAAC,OAAO,CAyCpD,CAAC"}
+{"version":3,"file":"cors.d.ts","sourceRoot":"","sources":["../src/cors.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,MAAM,SAAS,CAAC;AAClC,OAAO,EAAE,mBAAmB,EAAe,MAAM,MAAM,CAAC;AAkDxD,eAAO,MAAM,WAAW,EAAE,mBAAmB,CAAC,OAAO,CAyCpD,CAAC"}

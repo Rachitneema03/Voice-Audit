@@ -1,5 +1,5 @@
 import { Request } from "express";
-import { CorsOptionsDelegate } from "cors";
+import { CorsOptionsDelegate, CorsOptions } from "cors";
 
 /* ================== ENV DOMAINS ================== */
 
@@ -50,8 +50,8 @@ const VERCEL_REGEX = /^https:\/\/([a-z0-9-]+\.)*vercel\.app$/;
 /* ================== CORS OPTIONS ================== */
 
 export const corsOptions: CorsOptionsDelegate<Request> = (
-  req,
-  callback
+  req: Request,
+  callback: (err: Error | null, options?: CorsOptions) => void
 ) => {
   const origin = req.get("Origin"); // string | undefined
 
