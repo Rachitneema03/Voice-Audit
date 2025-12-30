@@ -60,18 +60,36 @@ export const corsOptions: CorsOptionsDelegate<Request> = (
     return callback(null, { origin: true });
   }
 
-  const isAllowed =
-    EXACT_ORIGINS.has(origin) || VERCEL_REGEX.test(origin);
+  const isExactMatch = EXACT_ORIGINS.has(origin);
+  const isVercelMatch = VERCEL_REGEX.test(origin);
+  const isAllowed = isExactMatch || isVercelMatch;
 
-  callback(null, {
-    origin: isAllowed,
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Authorization",
-      "Content-Type",
-      "X-Requested-With",
-    ],
-    exposedHeaders: ["Content-Disposition"],
-  });
+  // Debug logging in development
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[CORS] Origin: ${origin}`);
+    console.log(`[CORS] Exact match: ${isExactMatch}, Vercel match: ${isVercelMatch}`);
+    console.log(`[CORS] Allowed origins:`, Array.from(EXACT_ORIGINS));
+  }
+
+  if (isAllowed) {
+    // Return the actual origin string (not true) so the header is set correctly
+    callback(null, {
+      origin: origin,
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: [
+        "Authorization",
+        "Content-Type",
+        "X-Requested-With",
+        "Accept",
+      ],
+      exposedHeaders: ["Content-Disposition"],
+      preflightContinue: false,
+      optionsSuccessStatus: 204,
+    });
+  } else {
+    // Origin not allowed - log for debugging
+    console.warn(`[CORS] Blocked origin: ${origin}`);
+    callback(new Error(`CORS: Origin ${origin} is not allowed`));
+  }
 };
