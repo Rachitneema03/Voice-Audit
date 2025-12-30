@@ -15,6 +15,7 @@
   "type": "commonjs",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@types/cors": "^2.8.19",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
@@ -22,7 +23,6 @@
     "googleapis": "^169.0.0"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
     "@types/node": "^20.10.6",
     "ts-node": "^10.9.2",
