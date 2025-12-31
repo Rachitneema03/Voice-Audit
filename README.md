@@ -608,8 +608,8 @@ Backend, Database, Security
 UI Design
 </td>
 <td align="center">
-<a href="https://github.com">
-<img src="https://github.com/github.png" width="100px;" alt="Nitika Jain"/>
+<a href="https://github.com/nitikajain25">
+<img src="https://github.com/nitikajain25.png" width="100px;" alt="Nitika Jain"/>
 <br />
 <sub><b>Nitika Jain</b></sub>
 </a>
