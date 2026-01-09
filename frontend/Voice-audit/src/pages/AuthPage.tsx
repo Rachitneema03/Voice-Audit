@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { signInWithEmail, signUpWithEmail, signInWithGoogle } from '../firebase/auth';
 import { useAuth } from '../contexts/AuthContext';
 import { saveUserProfile } from '../services/firestore.service';
+import TrueFocus from '../components/TrueFocus';
 import './AuthPage.css';
 
 const AuthPage = () => {
@@ -96,89 +97,39 @@ const AuthPage = () => {
     }
   };
 
+  const toggleAuthMode = () => {
+    setIsSignIn(!isSignIn);
+    setError('');
+    setEmail('');
+    setPassword('');
+    setName('');
+  };
+
   return (
     <div className="auth-page">
+      {/* Brand Name - Outside Container */}
+      <div className="auth-brand">
+        <TrueFocus
+          sentence="Voice Audit"
+          manualMode={false}
+          blurAmount={4.5}
+          borderColor="#1a1a1a"
+          glowColor="rgba(26, 26, 26, 0.4)"
+          animationDuration={0.5}
+          pauseBetweenAnimations={1}
+        />
+      </div>
+
       <div className="auth-container">
+        {/* Header */}
         <div className="auth-header">
-          <h1 className="auth-title">Voice Audit</h1>
+          <h1 className="auth-title">{isSignIn ? 'Sign In' : 'Sign Up'}</h1>
           <p className="auth-subtitle">
-            {isSignIn ? 'Welcome back' : 'Create your account'}
+            {isSignIn ? 'Access your voice command dashboard' : 'Create your account to get started'}
           </p>
         </div>
 
-        <div className="auth-tabs">
-          <button
-            className={`auth-tab ${isSignIn ? 'active' : ''}`}
-            onClick={() => setIsSignIn(true)}
-          >
-            Sign In
-          </button>
-          <button
-            className={`auth-tab ${!isSignIn ? 'active' : ''}`}
-            onClick={() => setIsSignIn(false)}
-          >
-            Sign Up
-          </button>
-        </div>
-
-        {error && (
-          <div className="auth-error">
-            {error}
-          </div>
-        )}
-
-        <form className="auth-form" onSubmit={handleSubmit}>
-          {!isSignIn && (
-            <div className="form-group">
-              <label htmlFor="name">Name</label>
-              <input
-                type="text"
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required={!isSignIn}
-                placeholder="Enter your name"
-                disabled={loading}
-              />
-            </div>
-          )}
-
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="Enter your email"
-              disabled={loading}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="Enter your password"
-              disabled={loading}
-              minLength={6}
-            />
-          </div>
-
-          <button type="submit" className="auth-submit-btn" disabled={loading}>
-            {loading ? 'Processing...' : isSignIn ? 'Sign In' : 'Sign Up'}
-          </button>
-        </form>
-
-        <div className="auth-divider">
-          <span>OR</span>
-        </div>
-
+        {/* Google Auth Button */}
         <button 
           className="google-auth-btn" 
           onClick={handleGoogleAuth}
@@ -192,6 +143,86 @@ const AuthPage = () => {
           </svg>
           {loading ? 'Processing...' : 'Continue with Google'}
         </button>
+
+        {/* Divider */}
+        <div className="auth-divider">
+          <span>Or continue with email</span>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="auth-error">
+            <i className="bi bi-exclamation-circle"></i>
+            {error}
+          </div>
+        )}
+
+        {/* Form */}
+        <form className="auth-form" onSubmit={handleSubmit}>
+          {!isSignIn && (
+            <div className="form-group">
+              <label htmlFor="name">Name</label>
+              <div className="input-wrapper">
+                <i className="bi bi-person"></i>
+                <input
+                  type="text"
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required={!isSignIn}
+                  placeholder="Enter your name"
+                  disabled={loading}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <div className="input-wrapper">
+              <i className="bi bi-envelope"></i>
+              <input
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="hello@example.com"
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <div className="input-wrapper">
+              <i className="bi bi-lock"></i>
+              <input
+                type="password"
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="••••••••"
+                disabled={loading}
+                minLength={6}
+              />
+            </div>
+          </div>
+
+          <button type="submit" className="auth-submit-btn" disabled={loading}>
+            {loading ? 'Processing...' : isSignIn ? 'Sign In' : 'Sign Up'}
+            {!loading && <i className="bi bi-arrow-right"></i>}
+          </button>
+        </form>
+
+        {/* Toggle Auth Mode */}
+        <div className="auth-toggle">
+          {isSignIn ? "Don't have an account? " : "Already have an account? "}
+          <button className="toggle-btn" onClick={toggleAuthMode} disabled={loading}>
+            {isSignIn ? 'Sign up' : 'Sign in'}
+          </button>
+        </div>
       </div>
     </div>
   );
