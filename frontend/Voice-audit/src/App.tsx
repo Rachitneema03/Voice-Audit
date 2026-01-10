@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
 import ChatPage from './pages/ChatPage';
+import Preloader from './components/Preloader';
 import './App.css';
 
 const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
@@ -27,11 +29,21 @@ const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
 };
 
 function App() {
+  const [showPreloader, setShowPreloader] = useState(true);
+  const [isReady, setIsReady] = useState(false);
+
+  const handlePreloaderComplete = () => {
+    setShowPreloader(false);
+    // Small delay to ensure smooth transition
+    setTimeout(() => setIsReady(true), 100);
+  };
+
   return (
     <AuthProvider>
+      {showPreloader && <Preloader onComplete={handlePreloaderComplete} />}
       <Router>
         <Routes>
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={<LandingPage isReady={isReady} />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route 
             path="/chat" 

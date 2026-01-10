@@ -10,7 +10,11 @@ import './LandingPage.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const LandingPage = () => {
+interface LandingPageProps {
+  isReady?: boolean;
+}
+
+const LandingPage = ({ isReady = false }: LandingPageProps) => {
   const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState('home');
   const [isNavVisible, setIsNavVisible] = useState(true);
@@ -38,8 +42,8 @@ const LandingPage = () => {
     }
   };
 
+  // Navbar scroll behavior - always active
   useEffect(() => {
-    // Navbar scroll behavior
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
@@ -51,6 +55,12 @@ const LandingPage = () => {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // GSAP animations - wait for isReady
+  useEffect(() => {
+    if (!isReady) return;
 
     // Hero animations
     const heroTl = gsap.timeline();
@@ -114,10 +124,9 @@ const LandingPage = () => {
     );
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
       ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
     };
-  }, []);
+  }, [isReady]);
 
   const addToCardsRef = (el: HTMLDivElement | null) => {
     if (el && !cardsRef.current.includes(el)) {
@@ -224,7 +233,7 @@ const LandingPage = () => {
       {/* Hero Section */}
       <section id="home" className="hero-section">
         <div ref={heroRef} className="hero-content">
-          <h1 ref={headingRef} className="hero-heading">
+          <h1 ref={headingRef} className="hero-heading" style={{ opacity: isReady ? undefined : 0 }}>
             <BlurText
               text="Transform Voice"
               delay={300}
@@ -241,10 +250,10 @@ const LandingPage = () => {
               className="hero-heading-accent"
             />
           </h1>
-          <p ref={subHeadingRef} className="hero-subheading">
+          <p ref={subHeadingRef} className="hero-subheading" style={{ opacity: isReady ? undefined : 0 }}>
             Experience the future of voice technology. Seamlessly convert your spoken commands into powerful actions with our AI-driven platform.
           </p>
-          <button ref={ctaRef} className="hero-cta" onClick={handleGetStarted}>
+          <button ref={ctaRef} className="hero-cta" onClick={handleGetStarted} style={{ opacity: isReady ? undefined : 0 }}>
             Get Started
             <i className="bi bi-arrow-right"></i>
           </button>
