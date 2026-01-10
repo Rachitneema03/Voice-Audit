@@ -1,0 +1,71 @@
+.scroll-line-container {
+  position: absolute;
+  top: 0;
+  right: -20%;
+  width: 100%;
+  height: 350vh;
+  pointer-events: none;
+  z-index: 1;
+  overflow: visible;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.scroll-line-svg {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: auto;
+  max-width: 1278px;
+  opacity: 0.5;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.scroll-line-path {
+  will-change: stroke-dashoffset, stroke-dasharray;
+  transform: translateZ(0);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+  .scroll-line-container {
+    right: -30%;
+  }
+  
+  .scroll-line-svg {
+    opacity: 0.4;
+    transform: translateZ(0) scale(0.85);
+  }
+}
+
+@media (max-width: 1024px) {
+  .scroll-line-container {
+    right: -40%;
+  }
+  
+  .scroll-line-svg {
+    opacity: 0.3;
+    transform: translateZ(0) scale(0.7);
+  }
+}
+
+@media (max-width: 768px) {
+  .scroll-line-container {
+    right: -60%;
+    top: 10%;
+  }
+  
+  .scroll-line-svg {
+    opacity: 0.2;
+    transform: translateZ(0) scale(0.5);
+  }
+}
+
+@media (max-width: 480px) {
+  .scroll-line-container {
+    display: none;
+  }
+}

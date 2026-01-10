@@ -6,6 +6,8 @@ import BlurText from '../components/BlurText';
 import ProfileCard from '../components/ProfileCard';
 import Particles from '../components/Particles';
 import PixelCard from '../components/PixelCard';
+import ScrollProgress from '../components/ScrollProgress';
+import ScrollLinePath from '../components/ScrollLinePath';
 import './LandingPage.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -194,6 +196,12 @@ const LandingPage = ({ isReady = false }: LandingPageProps) => {
           disableRotation={true}
         />
       </div>
+
+      {/* Scroll Progress Indicator */}
+      <ScrollProgress />
+
+      {/* Scroll Line Path Graphic */}
+      <ScrollLinePath />
 
       {/* Navigation */}
       <nav ref={navRef} className={`nav-glass ${isNavVisible ? 'nav-visible' : 'nav-hidden'}`}>

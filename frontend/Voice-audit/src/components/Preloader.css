@@ -31,10 +31,19 @@
   justify-content: center;
   align-items: center;
   min-height: 120px;
+  width: 100%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .greeting-wrapper {
   text-align: center;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .greeting-text {
@@ -43,6 +52,8 @@
   font-weight: 600;
   color: #ffffff;
   letter-spacing: -0.03em;
+  text-align: center;
+  width: 100%;
   text-shadow: 
     0 0 10px rgba(255, 255, 255, 0.8),
     0 0 20px rgba(255, 255, 255, 0.6),
