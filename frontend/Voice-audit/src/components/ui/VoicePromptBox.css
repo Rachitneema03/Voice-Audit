@@ -1,0 +1,253 @@
+/* Voice Prompt Box Component */
+/* Premium white theme with clean, minimal design */
+
+.voice-prompt-box {
+  position: absolute;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 2rem);
+  max-width: 600px;
+  padding: 0 1rem;
+  z-index: 100;
+}
+
+.voice-prompt-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 28px;
+  padding: 0.5rem 0.75rem;
+  box-shadow: 
+    0 4px 24px rgba(0, 0, 0, 0.06),
+    0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+}
+
+.voice-prompt-content:hover {
+  box-shadow: 
+    0 6px 32px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.voice-prompt-content.has-text {
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+/* Left controls group */
+.voice-prompt-left-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Textarea */
+.voice-prompt-textarea {
+  flex: 1;
+  border: none;
+  background: transparent;
+  resize: none;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  color: #000000;
+  padding: 0.625rem 0.5rem;
+  min-height: 44px;
+  max-height: 150px;
+  line-height: 1.5;
+  outline: none;
+}
+
+.voice-prompt-textarea::placeholder {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+/* Status text for recording mode */
+.voice-prompt-status {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 0.5rem;
+}
+
+.voice-prompt-status-text {
+  font-size: 0.9375rem;
+  color: rgba(0, 0, 0, 0.5);
+  font-weight: 400;
+}
+
+/* Button base styles */
+.voice-prompt-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.voice-prompt-btn:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.5);
+  outline-offset: 2px;
+}
+
+/* Icon button (record again, cancel) */
+.voice-prompt-btn.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #000000;
+}
+
+.voice-prompt-btn.icon-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.voice-prompt-btn.icon-btn.cancel:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+/* Mic button */
+.voice-prompt-btn.mic-btn {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #f4f4f5;
+  color: #000000;
+}
+
+.voice-prompt-btn.mic-btn:hover {
+  background: #e4e4e7;
+}
+
+.voice-prompt-btn.mic-btn.recording {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.voice-prompt-btn.mic-btn.recording:hover {
+  background: #dc2626;
+}
+
+/* Recording pulse animation */
+.recording-pulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid rgba(239, 68, 68, 0.4);
+  animation: pulse 1.5s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* Send button */
+.voice-prompt-btn.send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #000000;
+  color: #ffffff;
+}
+
+.voice-prompt-btn.send-btn:hover:not(:disabled) {
+  background: #1a1a1a;
+  transform: translateY(-1px);
+}
+
+.voice-prompt-btn.send-btn:disabled {
+  background: rgba(0, 0, 0, 0.15);
+  color: rgba(0, 0, 0, 0.3);
+  cursor: not-allowed;
+}
+
+/* Icons */
+.voice-prompt-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.voice-prompt-icon.mic-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.voice-prompt-icon.stop-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .voice-prompt-box {
+    bottom: 1rem;
+    width: calc(100% - 1.5rem);
+    max-width: 100%;
+    padding: 0 0.5rem;
+  }
+
+  .voice-prompt-content {
+    padding: 0.375rem 0.5rem;
+    gap: 0.5rem;
+    border-radius: 24px;
+  }
+
+  .voice-prompt-textarea {
+    font-size: 1rem;
+    padding: 0.5rem 0.375rem;
+    min-height: 40px;
+  }
+
+  .voice-prompt-btn.mic-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .voice-prompt-btn.send-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .voice-prompt-btn.icon-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .voice-prompt-icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .voice-prompt-box {
+    bottom: 0.75rem;
+    width: calc(100% - 1rem);
+    padding: 0 0.25rem;
+  }
+
+  .voice-prompt-content {
+    padding: 0.25rem 0.375rem;
+    gap: 0.375rem;
+    border-radius: 20px;
+  }
+
+  .voice-prompt-status-text {
+    font-size: 0.875rem;
+  }
+}

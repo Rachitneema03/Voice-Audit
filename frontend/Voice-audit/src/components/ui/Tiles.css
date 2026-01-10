@@ -1,0 +1,61 @@
+/* Tiles Background Component */
+/* Light theme interactive grid background */
+
+.tiles-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tiles-row {
+  position: relative;
+  border-left: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.tiles-cell {
+  position: relative;
+  border-right: 1px solid rgba(0, 0, 0, 0.04);
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+/* Tile sizes */
+.tiles-sm {
+  width: 32px;
+  height: 32px;
+}
+
+.tiles-md {
+  width: 36px;
+  height: 36px;
+}
+
+.tiles-lg {
+  width: 48px;
+  height: 48px;
+}
+
+/* Responsive sizes */
+@media (min-width: 768px) {
+  .tiles-md {
+    width: 48px;
+    height: 48px;
+  }
+
+  .tiles-lg {
+    width: 64px;
+    height: 64px;
+  }
+}
+
+/* Hover glow effect */
+.tiles-cell:hover {
+  background-color: rgba(99, 102, 241, 0.08);
+}

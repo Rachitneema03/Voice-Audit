@@ -1,0 +1,49 @@
+/* Shining Text Component */
+/* Animated gradient text effect for loading states */
+
+.shining-text {
+  background: linear-gradient(
+    110deg,
+    #9ca3af 0%,
+    #9ca3af 35%,
+    #000000 50%,
+    #9ca3af 65%,
+    #9ca3af 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+/* Light theme variant (default) */
+.shining-text.light {
+  background: linear-gradient(
+    110deg,
+    #d1d5db 0%,
+    #d1d5db 35%,
+    #374151 50%,
+    #d1d5db 65%,
+    #d1d5db 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Larger variant for headings */
+.shining-text.large {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+/* Small variant */
+.shining-text.small {
+  font-size: 0.8125rem;
+  font-weight: 400;
+}

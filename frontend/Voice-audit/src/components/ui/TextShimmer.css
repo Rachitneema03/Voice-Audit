@@ -1,0 +1,46 @@
+/* TextShimmer Component */
+/* Animated shimmer text effect for welcome messages */
+
+.text-shimmer {
+  display: inline-block;
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background-repeat: no-repeat;
+  
+  /* Light theme colors */
+  --base-color: #9ca3af;
+  --gradient-color: #000000;
+  --spread: 30px;
+  
+  background-image: 
+    linear-gradient(
+      90deg,
+      transparent calc(50% - var(--spread)),
+      var(--gradient-color) 50%,
+      transparent calc(50% + var(--spread))
+    ),
+    linear-gradient(var(--base-color), var(--base-color));
+}
+
+/* Purple accent variant */
+.text-shimmer.purple {
+  --base-color: #a78bfa;
+  --gradient-color: #6366f1;
+}
+
+/* Large variant */
+.text-shimmer.large {
+  font-size: 1.5rem;
+  font-weight: 600;
+  --spread: 40px;
+}
+
+/* Medium variant */
+.text-shimmer.medium {
+  font-size: 1.125rem;
+  font-weight: 500;
+  --spread: 35px;
+}

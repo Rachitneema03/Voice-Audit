@@ -17,6 +17,11 @@ import {
 } from '../services/firestore.service';
 import { updateUserDisplayName } from '../firebase/auth';
 import { initChromeExtension } from '../services/chromeExtension.service';
+import { VoicePromptBox } from '../components/ui/VoicePromptBox';
+import { Tiles } from '../components/ui/Tiles';
+import { UserDropdown } from '../components/ui/UserDropdown';
+import { ShiningText } from '../components/ui/ShiningText';
+import { TextShimmer } from '../components/ui/TextShimmer';
 import './ChatPage.css';
 
 interface Message {
@@ -55,7 +60,6 @@ const ChatPage = () => {
   const [chatHistories, setChatHistories] = useState<ChatHistory[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [isLoadingChats, setIsLoadingChats] = useState(true);
-  const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [userProfile, setUserProfile] = useState<{ displayName: string; email: string; profilePhotoURL?: string } | null>(null);
   const [editDisplayName, setEditDisplayName] = useState('');
@@ -722,7 +726,6 @@ const ChatPage = () => {
     const currentPhoto = userProfile?.profilePhotoURL || currentUser?.photoURL || null;
     setEditProfilePhotoPreview(currentPhoto);
     setShowEditProfile(true);
-    setShowAccountMenu(false);
   };
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1133,112 +1136,54 @@ const ChatPage = () => {
 
         {!sidebarCollapsed && (
           <div className="sidebar-footer">
-            <button
-              className="account-btn"
-              onClick={() => setShowAccountMenu(!showAccountMenu)}
-            >
-              <div className="account-avatar">
-                {(userProfile?.profilePhotoURL || currentUser?.photoURL) ? (
-                  <img 
-                    src={userProfile?.profilePhotoURL || currentUser?.photoURL || ''} 
-                    alt="Profile" 
-                    className="account-avatar-img"
-                  />
-                ) : userProfile?.displayName || currentUser?.displayName ? (
-                  <span className="account-avatar-text">
-                    {(userProfile?.displayName || currentUser?.displayName || '').charAt(0).toUpperCase()}
-                  </span>
-                ) : (
-                  <i className="bi bi-person-circle account-icon"></i>
-                )}
-              </div>
-              <div className="account-info">
-                <div className="account-name">
-                  {userProfile?.displayName || currentUser?.displayName || 'User'}
-                </div>
-                <div className="account-email">
-                  {userProfile?.email || currentUser?.email || ''}
-                </div>
-              </div>
-              <i className={`bi bi-chevron-${showAccountMenu ? 'up' : 'down'} account-chevron`}></i>
-            </button>
-          {showAccountMenu && (
-            <div className="account-menu">
-              <div className="account-menu-header">
-                <div className="account-menu-avatar">
-                  {(userProfile?.profilePhotoURL || currentUser?.photoURL) ? (
-                    <img 
-                      src={userProfile?.profilePhotoURL || currentUser?.photoURL || ''} 
-                      alt="Profile" 
-                      className="account-menu-avatar-img"
-                    />
-                  ) : userProfile?.displayName || currentUser?.displayName ? (
-                    <span className="account-menu-avatar-text">
-                      {(userProfile?.displayName || currentUser?.displayName || '').charAt(0).toUpperCase()}
-                    </span>
-                  ) : (
-                    <i className="bi bi-person-circle"></i>
-                  )}
-                </div>
-                <div className="account-menu-user-info">
-                  <div className="account-menu-name">
-                    {userProfile?.displayName || currentUser?.displayName || 'User'}
-                  </div>
-                  <div className="account-menu-email">{userProfile?.email || currentUser?.email}</div>
-                </div>
-              </div>
-              <div className="account-menu-divider"></div>
-              <div 
-                className="account-menu-item"
-                onClick={handleEditProfile}
-              >
-                <i className="bi bi-pencil"></i> <span>Edit Profile</span>
-              </div>
-              <div className="account-menu-item">
-                <i className="bi bi-gear"></i> <span>Settings</span>
-              </div>
-              <div 
-                className="account-menu-item"
-                onClick={handleConnectGoogle}
-              >
-                {isGoogleConnected ? (
-                  <>
-                    <i className="bi bi-check-circle"></i> <span>Google Connected</span>
-                  </>
-                ) : (
-                  <>
-                    <i className="bi bi-google"></i> <span>Connect Google</span>
-                  </>
-                )}
-              </div>
-              <div className="account-menu-divider"></div>
-              <div 
-                className="account-menu-item account-menu-item-danger"
-                onClick={async () => {
-                  try {
-                    await logout();
-                    navigate('/auth');
-                  } catch (error) {
-                    console.error('Error signing out:', error);
-                  }
-                }}
-              >
-                <i className="bi bi-box-arrow-right"></i> <span>Sign Out</span>
-              </div>
-            </div>
-          )}
+            <UserDropdown
+              user={{
+                name: userProfile?.displayName || currentUser?.displayName || 'User',
+                email: userProfile?.email || currentUser?.email || '',
+                avatar: userProfile?.profilePhotoURL || currentUser?.photoURL || undefined,
+                initials: (userProfile?.displayName || currentUser?.displayName || 'U').charAt(0).toUpperCase(),
+                status: 'online'
+              }}
+              isGoogleConnected={isGoogleConnected}
+              onEditProfile={handleEditProfile}
+              onConnectGoogle={handleConnectGoogle}
+              onLogout={async () => {
+                try {
+                  await logout();
+                  navigate('/auth');
+                } catch (error) {
+                  console.error('Error signing out:', error);
+                }
+              }}
+            />
           </div>
         )}
       </div>
 
       <div className="chat-main">
         <div className="chat-header">
-          <div className="chat-header-title-container">
-            <img src="/logo3.png" alt="Voice Audit Logo" className="chat-header-logo" />
-            <h1>Voice Audit</h1>
-          </div>
         </div>
         <div className="chat-messages">
+          {/* Tiles Background */}
+          <Tiles rows={50} cols={20} tileSize="md" />
+          
+          {/* Welcome Message when no messages */}
+          {messages.length === 0 && !isProcessing && (
+            <div className="welcome-message">
+              <div className="welcome-icon">
+                <i className="bi bi-robot"></i>
+              </div>
+              <h2 className="welcome-title">
+                <TextShimmer duration={2.5} className="large">
+                  Hi! How can I help you today?
+                </TextShimmer>
+              </h2>
+              <p className="welcome-subtitle">
+                Use your voice to send commands. I can help with tasks, reminders, and more.
+              </p>
+            </div>
+          )}
+          
           {messages.map((message, index) => (
             <div
               key={message.id}
@@ -1265,111 +1210,28 @@ const ChatPage = () => {
                 <div className="avatar-glow"></div>
                 <i className="bi bi-robot avatar-icon"></i>
               </div>
-              <div className="message-content typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
+              <div className="message-content thinking-message">
+                <ShiningText text="Thinking..." />
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="chat-input-container">
-          {transcribedText ? (
-            <div className="voice-input-wrapper">
-              <div className="recording-controls">
-                <button
-                  className="control-btn record-again-btn"
-                  onClick={handleRecordAgain}
-                  title="Record Again"
-                >
-                  <i className="bi bi-mic-fill"></i>
-                </button>
-                <button
-                  className="control-btn cancel-btn"
-                  onClick={handleCancel}
-                  title="Cancel"
-                >
-                  <i className="bi bi-x-lg"></i>
-                </button>
-              </div>
-              <div className="voice-input-text">
-                <div className="text-edit-container">
-                  <textarea
-                    ref={textareaRef}
-                    className="text-edit-textarea"
-                    value={editedText}
-                    onChange={(e) => setEditedText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSend();
-                      } else if (e.key === 'Escape') {
-                        handleCancel();
-                      }
-                    }}
-                    placeholder="Edit your transcribed message..."
-                    rows={3}
-                    autoFocus
-                  />
-                </div>
-                <p className="voice-input-subtitle">
-                  Review and edit your transcription, then send
-                </p>
-              </div>
-              <button
-                className="send-btn-circle"
-                onClick={handleSend}
-                title="Send (Enter)"
-              >
-                <i className="bi bi-send-fill"></i>
-              </button>
-            </div>
-          ) : (
-            <div className="voice-input-wrapper">
-              <div className="record-button-container">
-                <button
-                  className={`record-btn-circle ${isRecording ? 'recording' : ''}`}
-                  onClick={isRecording ? stopRecording : startListening}
-                  title={isRecording ? 'Stop Recording' : 'Click to Start Recording'}
-                >
-                  <i className={`bi ${isRecording ? 'bi-stop-fill' : 'bi-mic-fill'}`}></i>
-                  {isRecording && (
-                    <>
-                      <div className="recording-ring ring-1"></div>
-                      <div className="recording-ring ring-2"></div>
-                      <div className="recording-ring ring-3"></div>
-                      <div className="sound-waves">
-                        <div className="wave wave-1"></div>
-                        <div className="wave wave-2"></div>
-                        <div className="wave wave-3"></div>
-                        <div className="wave wave-4"></div>
-                        <div className="wave wave-5"></div>
-                      </div>
-                    </>
-                  )}
-                </button>
-              </div>
-              <div className="voice-input-text">
-                <p className="voice-input-title">
-                  {isRecording ? 'Listening...' : 'Click to Start Recording'}
-                </p>
-                <p className="voice-input-subtitle">
-                  Speak your command and click send
-                </p>
-              </div>
-              <button
-                className="send-btn-circle"
-                onClick={handleSend}
-                title="Send"
-                disabled={!transcribedText}
-              >
-                <i className="bi bi-send-fill"></i>
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Voice Prompt Box - Bottom Center */}
+        <VoicePromptBox
+          ref={textareaRef}
+          isRecording={isRecording}
+          transcribedText={transcribedText}
+          editedText={editedText}
+          onEditedTextChange={setEditedText}
+          onStartRecording={startListening}
+          onStopRecording={stopRecording}
+          onSend={handleSend}
+          onCancel={handleCancel}
+          onRecordAgain={handleRecordAgain}
+          isProcessing={isProcessing}
+        />
       </div>
 
       {/* Edit Profile Modal */}
