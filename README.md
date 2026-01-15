@@ -25,6 +25,7 @@
 <summary>Click to expand</summary>
 
 - [About](#-about-voice-audit)
+- [ScreenShots] (#-screenshots-Voice-Audit)
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
 - [Quick Start](#-quick-start)
@@ -57,6 +58,29 @@
 - 🎨 **Modern UI** - Beautiful, responsive design with glassmorphism
 
 ---
+
+## screenshots Voice Audit
+
+🖼️ Website Screenshots
+Below are some screenshots showcasing the Voice Audit web application and its features:
+
+1. Dashboard - Main Chat Interface
+Dashboard - Main Chat Interface
+This is the main dashboard where users interact with the voice command system. The interface allows users to send commands, view chat history, and see the backend connection status.
+
+2. Sign In Page
+Sign In Page
+The sign-in page provides options to log in using Google or email and password. It offers a clean and user-friendly authentication experience.
+
+3. Meet The Creators
+Meet The Creators
+This section introduces the development team behind Voice Audit, highlighting each member's name and role in a visually appealing card layout.
+
+4. Landing Page
+Landing Page
+The landing page welcomes users with a modern design and a clear call to action. It explains the core value proposition: transforming voice into actionable commands using AI.
+
+
 
 ## ✨ Features
 
