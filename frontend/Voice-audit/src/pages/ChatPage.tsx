@@ -68,7 +68,7 @@ const ChatPage = () => {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [openMenuChatId, setOpenMenuChatId] = useState<string | null>(null);
@@ -131,13 +131,8 @@ const ChatPage = () => {
                 }));
                 setMessages(formattedMessages);
               } else {
-                // Default welcome message if no messages exist
-                setMessages([{
-                  id: Date.now().toString(),
-                  text: 'Hello! I\'m your voice audit. Record a command to get started.',
-                  sender: 'assistant',
-                  timestamp: new Date(),
-                }]);
+                // No messages - show welcome component
+                setMessages([]);
               }
             } catch (error: any) {
               console.error('❌ Error loading messages:', error);
@@ -146,32 +141,22 @@ const ChatPage = () => {
           }
         }
       } else {
-        // No chats exist - show welcome message without creating a chat
+        // No chats exist - show welcome component
         console.log(`ℹ️ No chats found for user ${currentUser.uid}`);
         setChatHistories([]);
         if (loadFirstChatMessages) {
           setCurrentChatId(null);
-          setMessages([{
-            id: Date.now().toString(),
-            text: 'Hello! I\'m your voice audit. Record a command to get started.',
-            sender: 'assistant',
-            timestamp: new Date(),
-          }]);
+          setMessages([]);
         }
       }
     } catch (error: any) {
       console.error(`❌ Error refreshing chats for user ${currentUser.uid}:`, error);
       showNotification(`Failed to load chats: ${error.message}`, 'error');
-      // Show welcome message even on error
+      // Show welcome component even on error
       setChatHistories([]);
       if (loadFirstChatMessages) {
         setCurrentChatId(null);
-        setMessages([{
-          id: Date.now().toString(),
-          text: 'Hello! I\'m your voice audit. Record a command to get started.',
-          sender: 'assistant',
-          timestamp: new Date(),
-        }]);
+        setMessages([]);
       }
     } finally {
       setIsLoadingChats(false);
@@ -705,14 +690,10 @@ const ChatPage = () => {
       
       // Set the new chat as current
       setCurrentChatId(chatId);
-      setMessages([
-        {
-          id: Date.now().toString(),
-          text: 'Hello! I\'m your voice audit. Type a command to get started.',
-          sender: 'assistant',
-          timestamp: new Date(),
-        },
-      ]);
+      setMessages([]); // Empty messages to show welcome component
+      
+      // Close mobile sidebar after creating new chat
+      setMobileSidebarOpen(false);
     } catch (error) {
       console.error('Error creating new chat:', error);
       showNotification('Failed to create new chat', 'error');
@@ -836,6 +817,7 @@ const ChatPage = () => {
     if (chat) {
       setCurrentChatId(chatId);
       setOpenMenuChatId(null); // Close menu when selecting chat
+      setMobileSidebarOpen(false); // Close mobile sidebar when selecting chat
       
       // Load messages from Firestore
       try {
@@ -849,25 +831,13 @@ const ChatPage = () => {
           }));
           setMessages(formattedMessages);
         } else {
-          setMessages([
-            {
-              id: Date.now().toString(),
-              text: 'Hello! I\'m your voice audit. Type a command to get started.',
-              sender: 'assistant',
-              timestamp: new Date(),
-            },
-          ]);
+          // No messages - show welcome component
+          setMessages([]);
         }
       } catch (error) {
         console.error('Error loading messages:', error);
-        setMessages([
-          {
-            id: Date.now().toString(),
-            text: 'Hello! I\'m your voice audit. Type a command to get started.',
-            sender: 'assistant',
-            timestamp: new Date(),
-          },
-        ]);
+        // On error - show welcome component
+        setMessages([]);
       }
     }
   };
@@ -922,14 +892,7 @@ const ChatPage = () => {
       // If deleted chat was current, clear it
       if (currentChatId === chatId) {
         setCurrentChatId(null);
-        setMessages([
-          {
-            id: Date.now().toString(),
-            text: 'Hello! I\'m your voice audit. Record a command to get started.',
-            sender: 'assistant',
-            timestamp: new Date(),
-          },
-        ]);
+        setMessages([]); // Show welcome component
       }
       
       showNotification('Chat deleted successfully', 'success');
@@ -1051,30 +1014,38 @@ const ChatPage = () => {
           </button>
         </div>
       )}
-      <div className={`chat-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+      
+      {/* Animated Burger Menu Button */}
+      <label className="burger" aria-label="Toggle menu">
+        <input 
+          type="checkbox" 
+          checked={mobileSidebarOpen}
+          onChange={(e) => setMobileSidebarOpen(e.target.checked)}
+        />
+        <span></span>
+        <span></span>
+        <span></span>
+      </label>
+      
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div 
+          className="mobile-sidebar-overlay"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+      
+      <div className={`chat-sidebar ${mobileSidebarOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
-          {!sidebarCollapsed && (
-            <>
-              <div className="sidebar-title-container">
-                <img src="/logo3.png" alt="Voice Audit Logo" className="sidebar-logo" />
-                <h2>Voice Audit</h2>
-              </div>
-              <button className="new-chat-btn" onClick={handleNewChat}>
-                + New Chat
-              </button>
-            </>
-          )}
-          <button 
-            className="sidebar-toggle-btn"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            <i className={`bi bi-chevron-${sidebarCollapsed ? 'right' : 'left'}`}></i>
+          <div className="sidebar-title-container">
+            <h2>Voice Audit</h2>
+          </div>
+          <button className="new-chat-btn" onClick={handleNewChat}>
+            + New Chat
           </button>
         </div>
 
-        {!sidebarCollapsed && (
-          <div className="chat-history">
+        <div className="chat-history">
             {isLoadingChats ? (
               <div className="chat-loading">
                 <i className="bi bi-arrow-repeat"></i>
@@ -1132,10 +1103,8 @@ const ChatPage = () => {
               ))
             )}
           </div>
-        )}
 
-        {!sidebarCollapsed && (
-          <div className="sidebar-footer">
+        <div className="sidebar-footer">
             <UserDropdown
               user={{
                 name: userProfile?.displayName || currentUser?.displayName || 'User',
@@ -1157,7 +1126,6 @@ const ChatPage = () => {
               }}
             />
           </div>
-        )}
       </div>
 
       <div className="chat-main">
