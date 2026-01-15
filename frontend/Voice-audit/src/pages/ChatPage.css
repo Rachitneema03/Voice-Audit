@@ -11,6 +11,7 @@
   overflow: hidden;
   position: relative;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  max-width: 100vw;
 }
 
 /* ============================================
@@ -897,6 +898,7 @@
   background: #ffffff;
   position: relative;
   width: 100%;
+  max-width: 100vw;
 }
 
 .chat-header {
@@ -937,6 +939,7 @@
 .chat-messages {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 1.75rem;
   padding-bottom: 120px; /* Space for fixed voice prompt box */
   display: flex;
@@ -1102,11 +1105,15 @@
   color: #000000;
   line-height: 1.55;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
   position: relative;
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   font-size: 0.9375rem;
   white-space: pre-wrap;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .message:hover .message-content {
@@ -2045,6 +2052,7 @@
     padding-top: 0.5rem;
     padding-bottom: 180px;
     background: #fafbfc;
+    overflow-x: hidden;
   }
 
   /* Ensure tiles background stays consistent on mobile */
