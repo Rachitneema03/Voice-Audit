@@ -25,7 +25,7 @@
 <summary>Click to expand</summary>
 
 - [About](#-about-voice-audit)
-- [ScreenShots] (#-screenshots-Voice-Audit)
+- [ScreenShots](#-screenshots-Voice-Audit)
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
 - [Quick Start](#-quick-start)
