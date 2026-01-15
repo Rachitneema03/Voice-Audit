@@ -42,6 +42,32 @@
 
 ---
 
+## 🖼️ Website Screenshots
+
+Below are some screenshots showcasing the Voice Audit web application and its features:
+
+### 1. Dashboard - Main Chat Interface
+![Dashboard - Main Chat Interface](./screenshots/dashboard.png)
+
+This is the main dashboard where users interact with the voice command system. The interface allows users to send commands, view chat history, and see the backend connection status. The clean UI features a sidebar for navigation, a chat area for conversations, and real-time backend connection notifications.
+
+### 2. Sign In Page
+![Sign In Page](./screenshots/signin.png)
+
+The sign-in page provides options to log in using Google or email and password. It offers a clean and user-friendly authentication experience with a modern design that matches the overall aesthetic of the application.
+
+### 3. Meet The Creators
+![Meet The Creators](./screenshots/team.png)
+
+This section introduces the development team behind Voice Audit, highlighting each member's name and role in a visually appealing card layout. The team consists of talented developers: Rachit Neema, Nitika Jain, Yash Vyas, and Sumedha Mandloi.
+
+### 4. Landing Page
+![Landing Page](./screenshots/landing.png)
+
+The landing page welcomes users with a modern design and a clear call to action. It explains the core value proposition: "Transform Voice Into Action" - seamlessly converting spoken commands into powerful actions with an AI-driven platform.
+
+---
+
 ## 🎯 About Voice Audit
 
 **Voice Audit** is an intelligent voice assistant that bridges natural language and Google Workspace. Simply speak or type commands, and watch as the AI automatically creates calendar events, manages tasks, or sends emails.
