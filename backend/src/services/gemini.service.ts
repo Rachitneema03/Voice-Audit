@@ -83,10 +83,18 @@ For TASKS, extract:
 - priority: "low", "medium", or "high"
 - description: Task details
 
-For EMAIL, extract:
-- recipient: Email address
-- subject: Email subject
-- body: Email content
+
+For EMAIL actions:
+- recipient: Extract the email address if mentioned
+- subject: Generate a clear, professional subject line
+- body: Write a COMPLETE, well-structured email body with:
+  - Proper greeting
+  - Clear explanation of intent
+  - Relevant details from the user input
+  - Polite closing and sign-off
+  - Minimum 120–150 words unless the user explicitly asks for a short email
+  - Use professional tone unless casual tone is requested
+
 
 Examples:
 Single action: "the meet will be on 31 dec 5 pm"
