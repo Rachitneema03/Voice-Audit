@@ -3,55 +3,44 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export interface GeminiResponse {
-  action?: "calendar" | "task" | "email" | "unknown"; // Single action
-  actions?: GeminiResponse[]; // Multiple actions
+  action?: "calendar" | "task" | "email" | "unknown";
+  actions?: GeminiResponse[];
   title?: string;
   description?: string;
-  date?: string; // ISO date string or relative date
-  time?: string; // Time in HH:MM format
-  duration?: number; // Duration in minutes (for calendar events)
-  location?: string; // For calendar events
-  recipient?: string; // Email address for email action
-  subject?: string; // Email subject
-  body?: string; // Email body
-  dueDate?: string; // For tasks
-  priority?: "low" | "medium" | "high"; // For tasks
+  date?: string;
+  time?: string;
+  duration?: number;
+  location?: string;
+  recipient?: string;
+  subject?: string;
+  body?: string;
+  dueDate?: string;
+  priority?: "low" | "medium" | "high";
 }
 
-export async function analyzeText(text: string): Promise<GeminiResponse> {
-  // Check API key
+export async function analyzeText(
+  text: string,
+  userName: string = "User"
+): Promise<GeminiResponse> {
+
+  // 🔐 Validate API key
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey.trim() === "") {
-    console.error("❌ GEMINI_API_KEY is not set or empty");
-    throw new Error("GEMINI_API_KEY is not set in .env file. Please add it to continue.");
+    throw new Error("GEMINI_API_KEY is not set in .env file.");
   }
 
-  console.log("🔍 Calling Gemini API with text:", text.substring(0, 50) + "...");
-  console.log("🔑 API Key present:", apiKey ? "Yes (length: " + apiKey.length + ")" : "No");
+  console.log("🔍 Calling Gemini with:", text.substring(0, 50) + "...");
+  console.log("👤 Sender name:", userName);
 
-  // Use gemini-2.5-flash (fastest) or gemini-2.5-pro (more capable)
-  // Older models (gemini-pro, gemini-1.5-*) are not available in current API
+  // 🧠 Model selection
   let model;
   try {
-    // Try gemini-2.5-flash first (fastest and most cost-effective)
     model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    console.log("✅ Using model: gemini-2.5-flash");
-  } catch (error) {
+  } catch {
     try {
-      // Fallback to gemini-pro-latest (always available)
       model = genAI.getGenerativeModel({ model: "gemini-pro-latest" });
-      console.log("✅ Using model: gemini-pro-latest");
-    } catch (error2) {
-      try {
-        // Try gemini-2.5-pro (more capable)
-        model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
-        console.log("✅ Using model: gemini-2.5-pro");
-      } catch (error3) {
-        // Last resort: gemini-flash-latest
-        console.warn("⚠️ Trying gemini-flash-latest as last resort");
-        model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-        console.log("✅ Using model: gemini-flash-latest");
-      }
+    } catch {
+      model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
     }
   }
 
@@ -59,156 +48,95 @@ export async function analyzeText(text: string): Promise<GeminiResponse> {
 
 User input: "${text}"
 
-CRITICAL: You MUST return ONLY a valid JSON object. No markdown, no code blocks, no explanations, no extra text. Just the JSON.
-
-IMPORTANT: If the user asks for MULTIPLE actions in one command (e.g., "schedule a meeting and send an email"), return an array of actions in the "actions" field. Otherwise, return a single action in the "action" field.
+CRITICAL: You MUST return ONLY a valid JSON object.
+No markdown, no explanations, no extra text.
 
 Rules:
-1. If it's about scheduling a meeting/event/appointment → action: "calendar"
-2. If it's about creating a task/todo/reminder → action: "task"  
-3. If it's about sending an email/message → action: "email"
+1. Meeting/event → action: "calendar"
+2. Task/todo → action: "task"
+3. Email → action: "email"
 4. Otherwise → action: "unknown"
 
-For CALENDAR events, extract:
-- title: Main event name (e.g., "Meeting", "Meet")
-- date: Convert to format like "2024-12-31" or "tomorrow" 
-- time: Convert to 24-hour format like "17:00" (5pm = 17:00, 2pm = 14:00)
-- duration: Default 60 minutes if not specified
-- description: Any additional details
-- location: Event location if mentioned
-
-For TASKS, extract:
-- title: Task name
-- dueDate: Date in format "YYYY-MM-DD" or relative like "tomorrow"
-- priority: "low", "medium", or "high"
-- description: Task details
-
-
 For EMAIL actions:
-- recipient: Extract the email address if mentioned
-- subject: Generate a clear, professional subject line
-- body: Write a COMPLETE, well-structured email body with:
-  - Proper greeting
-  - Clear explanation of intent
-  - Relevant details from the user input
-  - Polite closing and sign-off
-  - Minimum 120–150 words unless the user explicitly asks for a short email
-  - Use professional tone unless casual tone is requested
+- recipient
+- subject
+- body (complete professional email, 120–150 words)
+Always end emails with:
+Best regards,
+[Your Name]
 
+Return ONLY the JSON object.`;
 
-Examples:
-Single action: "the meet will be on 31 dec 5 pm"
-Output: {"action":"calendar","title":"Meet","date":"2024-12-31","time":"17:00","duration":60}
+  let result: any;
 
-Multiple actions: "schedule a meeting tomorrow at 3pm and send an email to john@example.com about the project"
-Output: {"actions":[{"action":"calendar","title":"Meeting","date":"tomorrow","time":"15:00","duration":60},{"action":"email","recipient":"john@example.com","subject":"Project Update","body":"Regarding the project"}]}
-
-Now process this input: "${text}"
-
-Return ONLY the JSON object, nothing else.`;
-
-  let result: any = null;
   try {
-    console.log("📤 Sending request to Gemini API...");
     result = await model.generateContent(prompt);
-    
-    if (!result || !result.response) {
-      throw new Error("Gemini API returned empty response");
+
+    const responseText = result?.response?.text();
+    if (!responseText) {
+      throw new Error("Empty response from Gemini");
     }
-    
-    const responseText = result.response.text();
-    
-    if (!responseText || responseText.trim() === "") {
-      throw new Error("Gemini API returned empty text");
-    }
-    
-    console.log("📥 Gemini raw response:", responseText); // Debug log
-    console.log("📥 Response length:", responseText.length);
-    
-    // Clean the response - remove markdown code blocks if present
+
+    // 🧹 Clean response
     let cleanedText = responseText
-      .replace(/```json\n?/g, "")
-      .replace(/```\n?/g, "")
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
       .trim();
-    
-    // Extract JSON object if there's extra text
+
     const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       cleanedText = jsonMatch[0];
     }
-    
-    console.log("🧹 Cleaned text:", cleanedText);
-    
+
     let parsed: GeminiResponse;
+
     try {
-      parsed = JSON.parse(cleanedText) as GeminiResponse;
-      console.log("✅ Parsed JSON successfully:", parsed);
-    } catch (parseError: any) {
-      console.error("❌ JSON Parse Error:", parseError.message);
-      console.error("❌ Text that failed to parse:", cleanedText);
-      throw new Error(`Failed to parse JSON: ${parseError.message}`);
+      parsed = JSON.parse(cleanedText);
+    } catch (err: any) {
+      throw new Error("JSON parse failed: " + err.message);
     }
-    
-    // Validate the response has at least an action or actions array
-    if (!parsed.action && !parsed.actions) {
-      console.error("❌ Parsed response missing 'action' or 'actions' field:", parsed);
-      throw new Error("Gemini response missing 'action' or 'actions' field");
-    }
-    
-    // If actions array exists, validate it
-    if (parsed.actions && Array.isArray(parsed.actions)) {
-      console.log(`✅ Gemini analysis complete. Found ${parsed.actions.length} action(s)`);
-      for (const action of parsed.actions) {
-        if (!action.action) {
-          throw new Error("One or more actions in the array is missing the 'action' field");
-        }
+
+    /* ================= EMAIL SIGNATURE FIX ================= */
+    if (parsed.action === "email" && parsed.body) {
+      const senderName = userName?.trim() || "User";
+
+      parsed.body = parsed.body.replace(
+        /\[Your Name\]/gi,
+        senderName
+      );
+
+      if (!parsed.body.toLowerCase().includes(senderName.toLowerCase())) {
+        parsed.body += `\n\nBest regards,\n${senderName}`;
       }
-    } else {
-      console.log("✅ Gemini analysis complete. Action:", parsed.action);
     }
-    
+    /* ================= END FIX ================= */
+
+    // ✅ Validate action
+    if (!parsed.action && !parsed.actions) {
+      throw new Error("Missing action in Gemini response");
+    }
+
     return parsed;
+
   } catch (error: any) {
-    console.error("❌ Gemini API Error:", error);
-    console.error("❌ Error type:", error.constructor.name);
-    console.error("❌ Error message:", error.message);
-    
-    if (result) {
-      console.error("📥 Raw Gemini response:", result.response?.text());
-    } else {
-      console.error("❌ No result object - API call may have failed");
-    }
-    
-    // Check for specific Gemini API errors
-    if (error.message?.includes("API key")) {
-      throw new Error("Invalid or missing Gemini API key. Please check your GEMINI_API_KEY in .env file.");
-    }
-    
-    if (error.message?.includes("quota") || error.message?.includes("rate limit")) {
-      throw new Error("Gemini API quota exceeded. Please check your API usage limits.");
-    }
-    
-    if (error.message?.includes("model")) {
-      throw new Error("Gemini model not available. Please check your API access.");
-    }
-    
-    // Try to extract basic info from the text as fallback
+    console.error("❌ Gemini error:", error.message);
+
+    // 🔁 Fallback logic
     const lowerText = text.toLowerCase();
     let fallbackAction: "calendar" | "task" | "email" | "unknown" = "unknown";
-    
-    if (lowerText.includes("meeting") || lowerText.includes("meet") || lowerText.includes("schedule") || lowerText.includes("event")) {
+
+    if (lowerText.includes("meet") || lowerText.includes("schedule")) {
       fallbackAction = "calendar";
-    } else if (lowerText.includes("task") || lowerText.includes("todo") || lowerText.includes("remind")) {
+    } else if (lowerText.includes("task") || lowerText.includes("todo")) {
       fallbackAction = "task";
-    } else if (lowerText.includes("email") || lowerText.includes("send") || lowerText.includes("mail")) {
+    } else if (lowerText.includes("email") || lowerText.includes("mail")) {
       fallbackAction = "email";
     }
-    
-    // Return a fallback response instead of throwing
+
     return {
       action: fallbackAction,
-      title: text.substring(0, 50), // Use first 50 chars as title
-      description: "Parsing failed, but action detected. Please provide more details."
-    } as GeminiResponse;
+      title: text.substring(0, 50),
+      description: "AI parsing failed. Please refine the input."
+    };
   }
 }

@@ -1,9 +1,16 @@
 import { Request, Response, NextFunction } from "express";
 import admin, { adminInitialized } from "../firebaseAdmin";
 
-export interface AuthenticatedRequest extends Request {
-  user?: admin.auth.DecodedIdToken;
+export interface AuthenticatedUser {
+  uid: string;
+  email?: string;
+  name: string;
 }
+
+export interface AuthenticatedRequest extends Request {
+  user?: AuthenticatedUser;
+}
+
 
 export async function verifyFirebaseToken(
   req: AuthenticatedRequest,
@@ -35,7 +42,15 @@ export async function verifyFirebaseToken(
 
   try {
     const decoded = await admin.auth().verifyIdToken(token);
-    req.user = decoded; // uid, email available
+    req.user = {
+      uid: decoded.uid,
+      email: decoded.email,
+      name:
+        decoded.name ||
+        decoded.email?.split("@")[0] ||
+        "User",
+    };
+ // uid, email available
     next();
   } catch (error) {
     console.error("Firebase token verification error:", error);

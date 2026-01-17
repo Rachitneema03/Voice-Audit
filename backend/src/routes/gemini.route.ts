@@ -1,19 +1,18 @@
-import { Router, Response } from "express";
-import { verifyFirebaseToken, AuthenticatedRequest } from "../middlewares/firebaseAuth";
+import { Router, Request, Response } from "express";
+import { verifyFirebaseToken } from "../middlewares/firebaseAuth";
 import { analyzeText } from "../services/gemini.service";
 
 const router = Router();
 
 /**
  * POST /api/gemini/test
- * Test Gemini API directly (for debugging)
  */
 router.post(
   "/test",
   verifyFirebaseToken,
-  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     try {
-      const { text } = req.body;
+      const { text } = req.body as { text?: string };
 
       if (!text || typeof text !== "string" || text.trim().length === 0) {
         res.status(400).json({
@@ -23,10 +22,17 @@ router.post(
         return;
       }
 
-      console.log("🧪 Testing Gemini API with text:", text);
+      // 🔐 Safely extract username from Firebase middleware
+      const userName =
+        (req as any).user?.name ||
+        (req as any).user?.email?.split("@")[0] ||
+        "User";
 
-      // Test Gemini directly
-      const geminiResponse = await analyzeText(text.trim());
+      console.log("🧪 Gemini input:", text);
+      console.log("👤 User:", userName);
+
+      // ✅ SINGLE Gemini call
+      const geminiResponse = await analyzeText(text.trim(), userName);
 
       res.status(200).json({
         success: true,
@@ -34,16 +40,14 @@ router.post(
         geminiResponse,
       });
     } catch (error: any) {
-      console.error("❌ Gemini API test failed:", error);
+      console.error("❌ Gemini API error:", error);
+
       res.status(500).json({
         success: false,
         message: error.message || "Gemini API test failed",
-        error: error.toString(),
       });
     }
   }
 );
 
 export default router;
-
-
