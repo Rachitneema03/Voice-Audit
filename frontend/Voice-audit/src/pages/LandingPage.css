@@ -1,5 +1,5 @@
 /* ==================== Base Styles ==================== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
 
 * {
   margin: 0;
@@ -12,7 +12,12 @@
   background-color: #fafafa;
   position: relative;
   color: #1a1a1a;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   font-size: 14px;
   line-height: 1.6;
   overflow-x: hidden;
@@ -20,13 +25,13 @@
 }
 
 .landing-page::before {
-  content: '';
+  content: "";
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: url('/waveform.png');
+  background-image: url("/waveform.png");
   background-position: center center;
   background-repeat: no-repeat;
   background-size: cover;
@@ -287,7 +292,8 @@
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) rotate(0deg);
   }
   33% {
@@ -806,14 +812,8 @@
   }
 
   .pixel-cards-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(3, 1fr) !important;
     gap: 24px !important;
-  }
-
-  .pixel-cards-grid .pixel-card:last-child {
-    grid-column: span 2;
-    max-width: 400px;
-    margin: 0 auto;
   }
 
   .pricing-grid {
@@ -880,20 +880,51 @@
 
   .pixel-cards-grid {
     grid-template-columns: 1fr !important;
-    gap: 24px !important;
+    gap: 20px !important;
   }
 
   .pixel-cards-grid .pixel-card {
-    min-height: 280px;
+    min-height: 320px;
+  }
+
+  .pixel-service-content {
+    padding: 28px 20px;
+    justify-content: space-around;
+  }
+
+  .pixel-service-icon {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+  }
+
+  .pixel-service-icon i {
+    font-size: 26px;
+  }
+
+  .pixel-service-title {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+
+  .pixel-service-description {
+    font-size: 13px;
+    max-width: 100%;
   }
 
   .pricing-grid {
     grid-template-columns: 1fr;
   }
 
+  .pricing-card {
+    width: 100%;
+    max-width: none;
+  }
+
   .pricing-card:last-child {
     grid-column: auto;
     max-width: none;
+    width: 100%;
   }
 
   .pricing-card.highlighted {
@@ -955,5 +986,37 @@
   .pricing-card {
     padding: 24px;
   }
-}
 
+  .pixel-cards-grid {
+    gap: 16px !important;
+  }
+
+  .pixel-cards-grid .pixel-card {
+    min-height: 300px;
+  }
+
+  .pixel-service-content {
+    padding: 24px 18px;
+    justify-content: space-around;
+  }
+
+  .pixel-service-icon {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 14px;
+  }
+
+  .pixel-service-icon i {
+    font-size: 24px;
+  }
+
+  .pixel-service-title {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .pixel-service-description {
+    font-size: 12px;
+    line-height: 1.6;
+  }
+}
