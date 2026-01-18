@@ -4,44 +4,60 @@ import { GeminiResponse } from "./gemini.service";
 
 /**
  * Parse date string for task due date
+ * Google Tasks API requires RFC 3339 timestamp format
+ * Set to end of day in local timezone
  */
 function parseDate(dateString: string): string {
   const now = new Date();
   const lowerDate = dateString.toLowerCase().trim();
 
+  let targetDate: Date;
+
   // Handle relative dates
   if (lowerDate === "today") {
-    return now.toISOString().split("T")[0];
-  }
-  if (lowerDate === "tomorrow") {
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split("T")[0];
+    targetDate = new Date(now);
+    targetDate.setHours(23, 59, 59, 0); // End of today
+  } else if (lowerDate === "tomorrow") {
+    targetDate = new Date(now);
+    targetDate.setDate(targetDate.getDate() + 1);
+    targetDate.setHours(23, 59, 59, 0); // End of tomorrow
+  } else {
+    // Try parsing as ISO date string (YYYY-MM-DD)
+    const parsedDate = new Date(dateString);
+    if (!isNaN(parsedDate.getTime())) {
+      parsedDate.setHours(23, 59, 59, 0); // Set to end of that day
+      targetDate = parsedDate;
+    } else {
+      // If parsing fails, default to end of today
+      targetDate = new Date(now);
+      targetDate.setHours(23, 59, 59, 0);
+    }
   }
 
-  // Try parsing as ISO date
-  const parsed = new Date(dateString);
-  if (!isNaN(parsed.getTime())) {
-    return parsed.toISOString().split("T")[0];
-  }
-
-  // Default to today if parsing fails
-  return now.toISOString().split("T")[0];
+  return targetDate.toISOString();
 }
 
 /**
- * Get task list ID (use default "@default" list)
+ * Get task list ID (use the first available list)
  */
 async function getTaskListId(auth: any): Promise<string> {
-  const tasks = google.tasks({ version: "v1", auth });
-  const response = await tasks.tasklists.list();
-  
-  // Use the default task list
-  const defaultList = response.data.items?.find(
-    (list) => list.id === "@default"
-  );
-  
-  return defaultList?.id || "@default";
+  try {
+    const tasks = google.tasks({ version: "v1", auth });
+    const response = await tasks.tasklists.list();
+
+    if (response.data.items && response.data.items.length > 0) {
+      // Use the first available task list
+      const firstList = response.data.items[0];
+      console.log("📋 Using task list:", firstList.title, "(ID:", firstList.id, ")");
+      return firstList.id!;
+    } else {
+      throw new Error("No task lists found for user");
+    }
+  } catch (error) {
+    console.error("❌ Error getting task list:", error);
+    // Fallback to default as last resort
+    return "@default";
+  }
 }
 
 /**
@@ -64,12 +80,18 @@ export async function createTask(
 
   const taskListId = await getTaskListId(auth);
 
+  const parsedDueDate = data.dueDate ? parseDate(data.dueDate) : undefined;
+  console.log("📅 Task due date input:", data.dueDate);
+  console.log("📅 Task due date parsed:", parsedDueDate);
+
   const task: tasks_v1.Schema$Task = {
     title: data.title,
-    notes: data.description || "",
-    due: data.dueDate ? parseDate(data.dueDate) : undefined,
+    ...(data.description && data.description.trim() && { notes: data.description.trim() }),
+    due: parsedDueDate,
     status: "needsAction",
   };
+
+  console.log("📝 Creating task with data:", JSON.stringify(task, null, 2));
 
   const response = await tasks.tasks.insert({
     tasklist: taskListId,
