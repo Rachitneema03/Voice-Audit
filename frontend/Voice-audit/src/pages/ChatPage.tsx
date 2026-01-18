@@ -68,6 +68,7 @@ const ChatPage = () => {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -1035,17 +1036,29 @@ const ChatPage = () => {
         />
       )}
       
-      <div className={`chat-sidebar ${mobileSidebarOpen ? 'mobile-open' : ''}`}>
+      <div className={`chat-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileSidebarOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
-          <div className="sidebar-title-container">
-            <h2>Voice Audit</h2>
-          </div>
-          <button className="new-chat-btn" onClick={handleNewChat}>
-            + New Chat
+          {!sidebarCollapsed && (
+            <>
+              <div className="sidebar-title-container">
+                <h2>Voice Audit</h2>
+              </div>
+              <button className="new-chat-btn" onClick={handleNewChat}>
+                + New Chat
+              </button>
+            </>
+          )}
+          <button 
+            className="sidebar-toggle-btn"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <i className={`bi bi-chevron-${sidebarCollapsed ? 'right' : 'left'}`}></i>
           </button>
         </div>
 
-        <div className="chat-history">
+        {!sidebarCollapsed && (
+          <div className="chat-history">
             {isLoadingChats ? (
               <div className="chat-loading">
                 <i className="bi bi-arrow-repeat"></i>
@@ -1103,8 +1116,10 @@ const ChatPage = () => {
               ))
             )}
           </div>
+        )}
 
-        <div className="sidebar-footer">
+        {!sidebarCollapsed && (
+          <div className="sidebar-footer">
             <UserDropdown
               user={{
                 name: userProfile?.displayName || currentUser?.displayName || 'User',
@@ -1126,6 +1141,7 @@ const ChatPage = () => {
               }}
             />
           </div>
+        )}
       </div>
 
       <div className="chat-main">
