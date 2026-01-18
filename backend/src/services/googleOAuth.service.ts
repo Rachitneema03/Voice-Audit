@@ -9,11 +9,13 @@ const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_REDIRECT_URI || "http://localhost:5000/api/auth/google/callback"
 );
 
-// Scopes required for Calendar, Tasks, and Gmail
+// Scopes required for Calendar, Tasks, Gmail, and User Profile
 export const SCOPES = [
   "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/tasks",
   "https://www.googleapis.com/auth/gmail.send",
+  "https://www.googleapis.com/auth/userinfo.profile",
+  "https://www.googleapis.com/auth/userinfo.email",
 ];
 
 /**
@@ -214,5 +216,103 @@ export async function getAuthenticatedClient(userId: string): Promise<typeof oau
   });
 
   return oauth2Client;
+}
+
+/**
+ * Fetch Google user profile using OAuth2 API
+ * @param auth - Authenticated OAuth2 client
+ * @returns User profile with name and email
+ */
+export async function getGoogleUserProfile(auth: typeof oauth2Client): Promise<{
+  name: string;
+  email: string;
+}> {
+  try {
+    console.log("🔍 Fetching Google user profile...");
+    
+    const oauth2 = google.oauth2({ version: "v2", auth: auth as any });
+    const response = await oauth2.userinfo.get();
+    
+    const profile = {
+      name: response.data.name || "",
+      email: response.data.email || "",
+    };
+    
+    console.log("✅ Google profile fetched:", profile.name, profile.email);
+    return profile;
+  } catch (error: any) {
+    console.error("❌ Error fetching Google user profile:", error.message);
+    throw new Error("Failed to fetch Google user profile: " + error.message);
+  }
+}
+
+/**
+ * Store user profile in Firestore
+ * @param userId - Firebase user ID
+ * @param profile - User profile with name and email
+ */
+export async function storeUserProfile(
+  userId: string,
+  profile: { name: string; email: string }
+): Promise<void> {
+  const db = admin.firestore();
+  await db.collection("userProfiles").doc(userId).set({
+    name: profile.name,
+    email: profile.email,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  console.log("✅ User profile stored in Firestore for user:", userId);
+}
+
+/**
+ * Get stored user profile from Firestore
+ * @param userId - Firebase user ID
+ * @returns User profile or null if not found
+ */
+export async function getStoredUserProfile(userId: string): Promise<{
+  name: string;
+  email: string;
+} | null> {
+  const db = admin.firestore();
+  const doc = await db.collection("userProfiles").doc(userId).get();
+  
+  if (!doc.exists) {
+    console.log("⚠️  No stored profile found for user:", userId);
+    return null;
+  }
+
+  const data = doc.data();
+  return {
+    name: data?.name || "",
+    email: data?.email || "",
+  };
+}
+
+/**
+ * Get user profile - first tries Firestore, then fetches from Google API
+ * @param userId - Firebase user ID
+ * @returns User profile with name and email
+ */
+export async function getUserProfile(userId: string): Promise<{
+  name: string;
+  email: string;
+}> {
+  // First try to get from Firestore (cached)
+  const storedProfile = await getStoredUserProfile(userId);
+  
+  if (storedProfile && storedProfile.name) {
+    console.log("✅ Using cached profile from Firestore:", storedProfile.name);
+    return storedProfile;
+  }
+  
+  // If not found, fetch from Google API
+  console.log("🔄 Profile not cached, fetching from Google API...");
+  const auth = await getAuthenticatedClient(userId);
+  const profile = await getGoogleUserProfile(auth);
+  
+  // Store in Firestore for future use
+  await storeUserProfile(userId, profile);
+  
+  return profile;
 }
 

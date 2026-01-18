@@ -61,9 +61,13 @@ For EMAIL actions:
 - recipient
 - subject
 - body (complete professional email, 120–150 words)
-Always end emails with:
-Best regards,
-[Your Name]
+
+IMPORTANT FOR EMAIL BODY:
+- Write only the email body content.
+- Do NOT include any signature or sign-off.
+- Do NOT include "Best regards", "Sincerely", "Thanks", or any closing.
+- Do NOT include sender name like "[Your Name]" or any placeholder.
+- The signature will be added automatically by the system.
 
 Return ONLY the JSON object.`;
 
@@ -96,20 +100,11 @@ Return ONLY the JSON object.`;
       throw new Error("JSON parse failed: " + err.message);
     }
 
-    /* ================= EMAIL SIGNATURE FIX ================= */
-    if (parsed.action === "email" && parsed.body) {
-      const senderName = userName?.trim() || "User";
-
-      parsed.body = parsed.body.replace(
-        /\[Your Name\]/gi,
-        senderName
-      );
-
-      if (!parsed.body.toLowerCase().includes(senderName.toLowerCase())) {
-        parsed.body += `\n\nBest regards,\n${senderName}`;
-      }
-    }
-    /* ================= END FIX ================= */
+    /* ================= EMAIL BODY CLEANUP ================= */
+    // NOTE: Signature is NOT added here. It is handled by gmail.service.ts
+    // using the actual Google account name from OAuth profile.
+    // Any AI-generated signature will be removed by the Gmail service.
+    /* ================= END CLEANUP ================= */
 
     // ✅ Validate action
     if (!parsed.action && !parsed.actions) {
